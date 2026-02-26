@@ -84,3 +84,31 @@ def delete_user(user_id):
     db.session.commit()
 
     return jsonify({"message": "User deleted successfully"})
+
+# 🔐 REGISTER
+@main.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
+
+    # Basic validation
+    if not data or not data.get("name") or not data.get("email") or not data.get("password"):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Check duplicate email
+    existing_user = User.query.filter_by(email=data["email"]).first()
+    if existing_user:
+        return jsonify({"error": "Email already exists"}), 400
+
+    new_user = User(
+        name=data["name"],
+        email=data["email"],
+        role=data.get("role", "cashier")
+    )
+
+    # 🔐 Hash password before saving
+    new_user.set_password(data["password"])
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"message": "User registered successfully"}), 201
