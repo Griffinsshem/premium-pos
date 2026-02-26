@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from .models import User
 from . import db
 
@@ -140,4 +140,16 @@ def login():
             "email": user.email,
             "role": user.role
         }
+    }), 200
+
+
+# 🔒 PROTECTED ROUTE
+@main.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+
+    return jsonify({
+        "message": "Access granted",
+        "current_user": current_user
     }), 200
