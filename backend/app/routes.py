@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import create_access_token
 from .models import User
 from . import db
 
@@ -24,11 +25,9 @@ def get_users():
 def create_user():
     data = request.get_json()
 
-    # Basic validation
     if not data or not data.get("name") or not data.get("email") or not data.get("password"):
         return jsonify({"error": "Missing required fields"}), 400
 
-    # Check duplicate email
     existing_user = User.query.filter_by(email=data["email"]).first()
     if existing_user:
         return jsonify({"error": "Email already exists"}), 400
@@ -36,14 +35,16 @@ def create_user():
     new_user = User(
         name=data["name"],
         email=data["email"],
-        password_hash=data["password"],  # hashing later
         role=data.get("role", "cashier")
     )
+
+    new_user.set_password(data["password"])
 
     db.session.add(new_user)
     db.session.commit()
 
     return jsonify({"message": "User created successfully"}), 201
+
 
 # 🔹 UPDATE
 @main.route("/users/<int:user_id>", methods=["PUT"])
@@ -59,7 +60,6 @@ def update_user(user_id):
         user.name = data["name"]
 
     if data.get("email"):
-        # Check if new email already exists
         existing_user = User.query.filter_by(email=data["email"]).first()
         if existing_user and existing_user.id != user.id:
             return jsonify({"error": "Email already exists"}), 400
@@ -71,6 +71,7 @@ def update_user(user_id):
     db.session.commit()
 
     return jsonify({"message": "User updated successfully"})
+
 
 # 🔹 DELETE
 @main.route("/users/<int:user_id>", methods=["DELETE"])
@@ -85,16 +86,15 @@ def delete_user(user_id):
 
     return jsonify({"message": "User deleted successfully"})
 
+
 # 🔐 REGISTER
 @main.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
 
-    # Basic validation
     if not data or not data.get("name") or not data.get("email") or not data.get("password"):
         return jsonify({"error": "Missing required fields"}), 400
 
-    # Check duplicate email
     existing_user = User.query.filter_by(email=data["email"]).first()
     if existing_user:
         return jsonify({"error": "Email already exists"}), 400
@@ -105,10 +105,39 @@ def register():
         role=data.get("role", "cashier")
     )
 
-    # 🔐 Hash password before saving
     new_user.set_password(data["password"])
 
     db.session.add(new_user)
     db.session.commit()
 
     return jsonify({"message": "User registered successfully"}), 201
+
+
+# 🔐 LOGIN
+@main.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+
+    if not data or not data.get("email") or not data.get("password"):
+        return jsonify({"error": "Email and password required"}), 400
+
+    user = User.query.filter_by(email=data["email"]).first()
+
+    if not user or not user.check_password(data["password"]):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    access_token = create_access_token(identity={
+        "id": user.id,
+        "email": user.email,
+        "role": user.role
+    })
+
+    return jsonify({
+        "access_token": access_token,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role
+        }
+    }), 200
