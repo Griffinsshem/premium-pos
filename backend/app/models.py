@@ -1,5 +1,6 @@
 from . import db
 import bcrypt
+from datetime import datetime
 
 
 class User(db.Model):
@@ -18,4 +19,29 @@ class User(db.Model):
 
     # 🔐 Verify password
     def check_password(self, password):
-        return bcrypt.checkpw(password.encode("utf-8"), self.password_hash.encode("utf-8"))
+        return bcrypt.checkpw(
+            password.encode("utf-8"),
+            self.password_hash.encode("utf-8")
+        )
+
+
+#  Product Model
+class Product(db.Model):
+    __tablename__ = "products"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    price = db.Column(db.Float, nullable=False)
+    stock = db.Column(db.Integer, default=0)
+
+    is_deleted = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
