@@ -158,23 +158,57 @@ def protected():
 
 
 # ==============================
-# PRODUCT ROUTES (STEP 2)
+# PRODUCT ROUTES (STEP 3 - VALIDATION)
 # ==============================
 
-# 🔹 CREATE PRODUCT
+def validate_product_data(data, is_update=False):
+    errors = []
+
+    if not data:
+        errors.append("Request body is required")
+        return errors
+
+    if not is_update or "name" in data:
+        name = data.get("name")
+        if not name or not isinstance(name, str) or len(name.strip()) == 0:
+            errors.append("Valid product name is required")
+        elif len(name) > 100:
+            errors.append("Product name cannot exceed 100 characters")
+
+    if not is_update or "price" in data:
+        price = data.get("price")
+        try:
+            price = float(price)
+            if price <= 0:
+                errors.append("Price must be greater than 0")
+        except (TypeError, ValueError):
+            errors.append("Price must be a valid number")
+
+    if "stock" in data:
+        try:
+            stock = int(data.get("stock"))
+            if stock < 0:
+                errors.append("Stock cannot be negative")
+        except (TypeError, ValueError):
+            errors.append("Stock must be an integer")
+
+    return errors
+
+
 @main.route("/products", methods=["POST"])
 @jwt_required()
 def create_product():
     data = request.get_json()
 
-    if not data or not data.get("name") or data.get("price") is None:
-        return jsonify({"error": "Name and price are required"}), 400
+    errors = validate_product_data(data)
+    if errors:
+        return jsonify({"errors": errors}), 400
 
     product = Product(
-        name=data["name"],
+        name=data["name"].strip(),
         description=data.get("description"),
-        price=data["price"],
-        stock=data.get("stock", 0)
+        price=float(data["price"]),
+        stock=int(data.get("stock", 0))
     )
 
     db.session.add(product)
@@ -183,7 +217,6 @@ def create_product():
     return jsonify({"message": "Product created successfully"}), 201
 
 
-# 🔹 GET PRODUCTS (non-deleted only)
 @main.route("/products", methods=["GET"])
 @jwt_required()
 def get_products():
@@ -203,7 +236,6 @@ def get_products():
     ])
 
 
-# 🔹 UPDATE PRODUCT
 @main.route("/products/<int:product_id>", methods=["PUT"])
 @jwt_required()
 def update_product(product_id):
@@ -214,24 +246,27 @@ def update_product(product_id):
 
     data = request.get_json()
 
-    if data.get("name"):
-        product.name = data["name"]
+    errors = validate_product_data(data, is_update=True)
+    if errors:
+        return jsonify({"errors": errors}), 400
 
-    if data.get("description") is not None:
+    if "name" in data:
+        product.name = data["name"].strip()
+
+    if "description" in data:
         product.description = data["description"]
 
-    if data.get("price") is not None:
-        product.price = data["price"]
+    if "price" in data:
+        product.price = float(data["price"])
 
-    if data.get("stock") is not None:
-        product.stock = data["stock"]
+    if "stock" in data:
+        product.stock = int(data["stock"])
 
     db.session.commit()
 
     return jsonify({"message": "Product updated successfully"})
 
 
-# 🔹 SOFT DELETE PRODUCT
 @main.route("/products/<int:product_id>", methods=["DELETE"])
 @jwt_required()
 def delete_product(product_id):
