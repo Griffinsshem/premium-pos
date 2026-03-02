@@ -158,7 +158,7 @@ def protected():
 
 
 # ==============================
-# PRODUCT ROUTES (STEP 3 - VALIDATION)
+# PRODUCT VALIDATION
 # ==============================
 
 def validate_product_data(data, is_update=False):
@@ -195,6 +195,10 @@ def validate_product_data(data, is_update=False):
     return errors
 
 
+# ==============================
+# PRODUCT ROUTES (WITH PAGINATION)
+# ==============================
+
 @main.route("/products", methods=["POST"])
 @jwt_required()
 def create_product():
@@ -220,20 +224,46 @@ def create_product():
 @main.route("/products", methods=["GET"])
 @jwt_required()
 def get_products():
-    products = Product.query.filter_by(is_deleted=False).all()
+    # Get pagination parameters
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 5, type=int)
 
-    return jsonify([
-        {
-            "id": p.id,
-            "name": p.name,
-            "description": p.description,
-            "price": p.price,
-            "stock": p.stock,
-            "created_at": p.created_at,
-            "updated_at": p.updated_at
+    # Safety limits
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = 5
+    if per_page > 50:
+        per_page = 50
+
+    pagination = Product.query.filter_by(is_deleted=False) \
+        .order_by(Product.created_at.desc()) \
+        .paginate(page=page, per_page=per_page, error_out=False)
+
+    products = pagination.items
+
+    return jsonify({
+        "products": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "description": p.description,
+                "price": p.price,
+                "stock": p.stock,
+                "created_at": p.created_at,
+                "updated_at": p.updated_at
+            }
+            for p in products
+        ],
+        "pagination": {
+            "total_products": pagination.total,
+            "total_pages": pagination.pages,
+            "current_page": pagination.page,
+            "per_page": pagination.per_page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
         }
-        for p in products
-    ])
+    })
 
 
 @main.route("/products/<int:product_id>", methods=["PUT"])
