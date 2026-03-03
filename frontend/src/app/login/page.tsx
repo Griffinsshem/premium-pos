@@ -23,6 +23,7 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // ✅ IMPORTANT FIX
         body: JSON.stringify({ email, password }),
       });
 
@@ -34,7 +35,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect after successful login
       router.push("/dashboard");
     } catch (err) {
       setError("Something went wrong");
