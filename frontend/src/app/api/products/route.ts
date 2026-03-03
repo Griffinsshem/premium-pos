@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
 
     if (!token) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Unauthorized - No token found" },
         { status: 401 }
       );
     }
@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       }
     );
@@ -29,14 +30,23 @@ export async function GET(request: NextRequest) {
     const data = await backendResponse.json();
 
     if (!backendResponse.ok) {
+      console.error("Flask error:", data);
+
       return NextResponse.json(
-        { error: data.error || "Failed to fetch products" },
+        {
+          error:
+            data.msg ||
+            data.error ||
+            "Failed to fetch products from backend",
+        },
         { status: backendResponse.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
+    console.error("Server error:", error);
+
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }
