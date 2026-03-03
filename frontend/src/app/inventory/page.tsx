@@ -26,7 +26,12 @@ export default function InventoryPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch("/api/products?page=1&per_page=5");
+        const response = await fetch(
+          "/api/products?page=1&per_page=5",
+          {
+            credentials: "include", // ✅ IMPORTANT FIX
+          }
+        );
 
         const data = await response.json();
 
@@ -63,6 +68,8 @@ export default function InventoryPage() {
       <div className="bg-white shadow-md rounded-xl p-6 border">
         {loading ? (
           <p>Loading products...</p>
+        ) : products.length === 0 ? (
+          <p>No products found.</p>
         ) : (
           <div className="space-y-2">
             {products.map((product) => (
