@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+const BACKEND_URL = "http://127.0.0.1:5000";
+
+async function getToken() {
+  const cookieStore = await cookies();
+  return cookieStore.get("token")?.value;
+}
+
+/* =========================
+   GET PRODUCTS
+========================= */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    const token = await getToken();
 
     if (!token) {
       return NextResponse.json(
@@ -18,12 +27,11 @@ export async function GET(request: NextRequest) {
     const perPage = searchParams.get("per_page") || "5";
 
     const backendResponse = await fetch(
-      `http://127.0.0.1:5000/products?page=${page}&per_page=${perPage}`,
+      `${BACKEND_URL}/products?page=${page}&per_page=${perPage}`,
       {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
       }
     );
@@ -32,17 +40,55 @@ export async function GET(request: NextRequest) {
 
     if (!backendResponse.ok) {
       return NextResponse.json(
-        {
-          error:
-            data.msg ||
-            data.error ||
-            "Failed to fetch products from backend",
-        },
+        { error: data.msg || data.error || "Failed to fetch products" },
         { status: backendResponse.status }
       );
     }
 
     return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/* =========================
+   CREATE PRODUCT
+========================= */
+export async function POST(request: NextRequest) {
+  try {
+    const token = await getToken();
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "Unauthorized - No token found" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+
+    const backendResponse = await fetch(`${BACKEND_URL}/products`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await backendResponse.json();
+
+    if (!backendResponse.ok) {
+      return NextResponse.json(
+        { error: data.msg || data.error || "Failed to create product" },
+        { status: backendResponse.status }
+      );
+    }
+
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: "Server error" },
