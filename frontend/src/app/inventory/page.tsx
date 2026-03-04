@@ -29,7 +29,7 @@ export default function InventoryPage() {
         const response = await fetch(
           "/api/products?page=1&per_page=5",
           {
-            credentials: "include", // ✅ IMPORTANT FIX
+            credentials: "include",
           }
         );
 
@@ -39,8 +39,6 @@ export default function InventoryPage() {
           console.error(data.error);
           return;
         }
-
-        console.log("Products:", data);
 
         setProducts(data.products);
         setPagination(data.pagination);
@@ -65,24 +63,68 @@ export default function InventoryPage() {
         </p>
       </div>
 
-      <div className="bg-white shadow-md rounded-xl p-6 border">
+      <div className="bg-white shadow-md rounded-xl border overflow-hidden">
         {loading ? (
-          <p>Loading products...</p>
-        ) : products.length === 0 ? (
-          <p>No products found.</p>
-        ) : (
-          <div className="space-y-2">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="border rounded-lg p-3 flex justify-between"
-              >
-                <span>{product.name}</span>
-                <span>${product.price}</span>
-                <span>Stock: {product.stock}</span>
-              </div>
-            ))}
+          <div className="p-6">
+            <p>Loading products...</p>
           </div>
+        ) : products.length === 0 ? (
+          <div className="p-6">
+            <p>No products found.</p>
+          </div>
+        ) : (
+          <>
+            <table className="min-w-full text-sm text-left">
+              <thead className="bg-gray-100 border-b">
+                <tr>
+                  <th className="px-6 py-3 font-semibold text-gray-700">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 font-semibold text-gray-700">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 font-semibold text-gray-700">
+                    Stock
+                  </th>
+                  <th className="px-6 py-3 font-semibold text-gray-700">
+                    Created
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr
+                    key={product.id}
+                    className="border-b hover:bg-gray-50 transition"
+                  >
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      {product.name}
+                    </td>
+                    <td className="px-6 py-4">
+                      ${product.price.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {product.stock}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      {new Date(product.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {pagination && (
+              <div className="px-6 py-4 bg-gray-50 text-sm text-gray-600 flex justify-between">
+                <span>
+                  Page {pagination.current_page} of {pagination.total_pages}
+                </span>
+                <span>
+                  Total Products: {pagination.total_products}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
