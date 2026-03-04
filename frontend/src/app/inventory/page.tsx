@@ -23,46 +23,116 @@ export default function InventoryPage() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await fetch(
-          "/api/products?page=1&per_page=5",
-          {
-            credentials: "include",
-          }
-        );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-        const data = await response.json();
+  const [formData, setFormData] = useState({
+    name: "",
+    price: "",
+    stock: "",
+  });
 
-        if (!response.ok) {
-          console.error(data.error);
-          return;
-        }
+  /* =========================
+     FETCH PRODUCTS
+  ========================= */
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
 
-        setProducts(data.products);
-        setPagination(data.pagination);
-      } catch (error) {
-        console.error("Failed to fetch products");
-      } finally {
-        setLoading(false);
+      const response = await fetch(
+        "/api/products?page=1&per_page=5",
+        { credentials: "include" }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(data.error);
+        return;
       }
-    };
 
+      setProducts(data.products);
+      setPagination(data.pagination);
+    } catch (error) {
+      console.error("Failed to fetch products");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
   }, []);
 
+  /* =========================
+     CREATE PRODUCT
+  ========================= */
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name || !formData.price || !formData.stock) {
+      alert("All fields are required");
+      return;
+    }
+
+    try {
+      setCreating(true);
+
+      const response = await fetch("/api/products", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          price: parseFloat(formData.price),
+          stock: parseInt(formData.stock),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to create product");
+        return;
+      }
+
+      // Reset form
+      setFormData({ name: "", price: "", stock: "" });
+      setIsModalOpen(false);
+
+      // Refresh list
+      await fetchProducts();
+    } catch (error) {
+      alert("Something went wrong");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          TruVend Inventory Management
-        </h1>
-        <p className="text-gray-500 mt-2">
-          Manage your products, stock levels, and pricing.
-        </p>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            TruVend Inventory Management
+          </h1>
+          <p className="text-gray-500 mt-2">
+            Manage your products, stock levels, and pricing.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+        >
+          + Add Product
+        </button>
       </div>
 
+      {/* Table */}
       <div className="bg-white shadow-md rounded-xl border overflow-hidden">
         {loading ? (
           <div className="p-6">
@@ -127,6 +197,66 @@ export default function InventoryPage() {
           </>
         )}
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-xl font-semibold">Add New Product</h2>
+
+            <form onSubmit={handleCreateProduct} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Product Name"
+                className="w-full border rounded-lg px-3 py-2"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+              />
+
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Price"
+                className="w-full border rounded-lg px-3 py-2"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: e.target.value })
+                }
+              />
+
+              <input
+                type="number"
+                placeholder="Stock"
+                className="w-full border rounded-lg px-3 py-2"
+                value={formData.stock}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock: e.target.value })
+                }
+              />
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+                >
+                  {creating ? "Creating..." : "Create Product"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
