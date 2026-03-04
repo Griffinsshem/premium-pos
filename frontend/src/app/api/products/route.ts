@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
 
     if (!token) {
       return NextResponse.json(
@@ -12,7 +14,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-
     const page = searchParams.get("page") || "1";
     const perPage = searchParams.get("per_page") || "5";
 
@@ -30,8 +31,6 @@ export async function GET(request: NextRequest) {
     const data = await backendResponse.json();
 
     if (!backendResponse.ok) {
-      console.error("Flask error:", data);
-
       return NextResponse.json(
         {
           error:
@@ -45,8 +44,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Server error:", error);
-
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }
