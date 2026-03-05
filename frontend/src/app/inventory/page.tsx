@@ -25,6 +25,7 @@ export default function InventoryPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -65,9 +66,31 @@ export default function InventoryPage() {
   }, []);
 
   /* =========================
-     CREATE PRODUCT
+     OPEN CREATE MODAL
   ========================= */
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingProduct(null);
+    setFormData({ name: "", price: "", stock: "" });
+    setIsModalOpen(true);
+  };
+
+  /* =========================
+     OPEN EDIT MODAL
+  ========================= */
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+    });
+    setIsModalOpen(true);
+  };
+
+  /* =========================
+     SUBMIT (CREATE OR UPDATE)
+  ========================= */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.price || !formData.stock) {
@@ -78,8 +101,13 @@ export default function InventoryPage() {
     try {
       setCreating(true);
 
-      const response = await fetch("/api/products", {
-        method: "POST",
+      const method = editingProduct ? "PUT" : "POST";
+      const url = editingProduct
+        ? `/api/products/${editingProduct.id}`
+        : "/api/products";
+
+      const response = await fetch(url, {
+        method,
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
@@ -94,15 +122,14 @@ export default function InventoryPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "Failed to create product");
+        alert(data.error || "Operation failed");
         return;
       }
 
-      // Reset form
-      setFormData({ name: "", price: "", stock: "" });
       setIsModalOpen(false);
+      setEditingProduct(null);
+      setFormData({ name: "", price: "", stock: "" });
 
-      // Refresh list
       await fetchProducts();
     } catch (error) {
       alert("Something went wrong");
@@ -125,7 +152,7 @@ export default function InventoryPage() {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
         >
           + Add Product
@@ -147,18 +174,11 @@ export default function InventoryPage() {
             <table className="min-w-full text-sm text-left">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Stock
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Created
-                  </th>
+                  <th className="px-6 py-3">Name</th>
+                  <th className="px-6 py-3">Price</th>
+                  <th className="px-6 py-3">Stock</th>
+                  <th className="px-6 py-3">Created</th>
+                  <th className="px-6 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,7 +187,7 @@ export default function InventoryPage() {
                     key={product.id}
                     className="border-b hover:bg-gray-50 transition"
                   >
-                    <td className="px-6 py-4 font-medium text-gray-900">
+                    <td className="px-6 py-4 font-medium">
                       {product.name}
                     </td>
                     <td className="px-6 py-4">
@@ -178,6 +198,14 @@ export default function InventoryPage() {
                     </td>
                     <td className="px-6 py-4 text-gray-500">
                       {new Date(product.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => openEditModal(product)}
+                        className="text-blue-600 hover:underline"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -202,9 +230,11 @@ export default function InventoryPage() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-xl font-semibold">Add New Product</h2>
+            <h2 className="text-xl font-semibold">
+              {editingProduct ? "Edit Product" : "Add New Product"}
+            </h2>
 
-            <form onSubmit={handleCreateProduct} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 type="text"
                 placeholder="Product Name"
@@ -250,7 +280,11 @@ export default function InventoryPage() {
                   disabled={creating}
                   className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
                 >
-                  {creating ? "Creating..." : "Create Product"}
+                  {creating
+                    ? "Processing..."
+                    : editingProduct
+                      ? "Update Product"
+                      : "Create Product"}
                 </button>
               </div>
             </form>
