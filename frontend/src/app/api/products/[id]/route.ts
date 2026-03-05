@@ -13,7 +13,7 @@ async function getToken() {
 ========================= */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = await getToken();
@@ -25,10 +25,12 @@ export async function PUT(
       );
     }
 
+    const { id } = await context.params;
+
     const body = await request.json();
 
     const backendResponse = await fetch(
-      `${BACKEND_URL}/products/${params.id}`,
+      `${BACKEND_URL}/products/${id}`,
       {
         method: "PUT",
         headers: {
@@ -43,13 +45,15 @@ export async function PUT(
 
     if (!backendResponse.ok) {
       return NextResponse.json(
-        { error: data.error || data.errors || "Failed to update product" },
+        { error: data.error || "Failed to update product" },
         { status: backendResponse.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
+    console.error("PUT API error:", error);
+
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }
