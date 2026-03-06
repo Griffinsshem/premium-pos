@@ -327,27 +327,33 @@ def adjust_stock():
     change = data.get("change")
     reason = data.get("reason")
 
-    if not product_id or change is None or not reason:
+    # Validate required fields
+    if product_id is None or change is None or not reason:
         return jsonify({
             "error": "product_id, change, and reason are required"
         }), 400
 
+    # Find product
     product = Product.query.get(product_id)
 
     if not product or product.is_deleted:
         return jsonify({"error": "Product not found"}), 404
 
+    # Validate change value
     try:
         change = int(change)
-    except ValueError:
+    except (TypeError, ValueError):
         return jsonify({"error": "Change must be an integer"}), 400
 
+    # Prevent stock from going below zero
     new_stock = product.stock + change
-
     if new_stock < 0:
-        return jsonify({"error": "Stock cannot go below 0"}), 400
+        return jsonify({
+            "error": "Stock adjustment failed. Stock cannot go below 0",
+            "current_stock": product.stock
+        }), 400
 
-    # Get logged in user
+    # Get logged-in user
     current_user = get_jwt_identity()
 
     # Update stock
@@ -366,6 +372,14 @@ def adjust_stock():
 
     return jsonify({
         "message": "Stock adjusted successfully",
-        "product_id": product.id,
-        "new_stock": product.stock
+        "product": {
+            "id": product.id,
+            "name": product.name,
+            "new_stock": product.stock
+        },
+        "adjustment": {
+            "change": change,
+            "reason": reason,
+            "adjusted_by": current_user["id"]
+        }
     }), 200
