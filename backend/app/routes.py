@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from .models import User, Product
+from .models import User, Product, StockAdjustment
 from . import db
 
 main = Blueprint("main", __name__)
@@ -309,3 +309,63 @@ def delete_product(product_id):
     db.session.commit()
 
     return jsonify({"message": "Product deleted successfully"})
+
+
+# ==============================
+# STOCK ADJUSTMENT ROUTES
+# ==============================
+
+@main.route("/stock_adjustments", methods=["POST"])
+@jwt_required()
+def adjust_stock():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    product_id = data.get("product_id")
+    change = data.get("change")
+    reason = data.get("reason")
+
+    if not product_id or change is None or not reason:
+        return jsonify({
+            "error": "product_id, change, and reason are required"
+        }), 400
+
+    product = Product.query.get(product_id)
+
+    if not product or product.is_deleted:
+        return jsonify({"error": "Product not found"}), 404
+
+    try:
+        change = int(change)
+    except ValueError:
+        return jsonify({"error": "Change must be an integer"}), 400
+
+    new_stock = product.stock + change
+
+    if new_stock < 0:
+        return jsonify({"error": "Stock cannot go below 0"}), 400
+
+    # Get logged in user
+    current_user = get_jwt_identity()
+
+    # Update stock
+    product.stock = new_stock
+
+    # Log adjustment
+    adjustment = StockAdjustment(
+        product_id=product.id,
+        user_id=current_user["id"],
+        change=change,
+        reason=reason
+    )
+
+    db.session.add(adjustment)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Stock adjusted successfully",
+        "product_id": product.id,
+        "new_stock": product.stock
+    }), 200
