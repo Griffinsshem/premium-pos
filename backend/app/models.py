@@ -32,7 +32,6 @@ class User(db.Model):
         )
 
 
-# Product Model
 class Product(db.Model):
     __tablename__ = "products"
 
@@ -40,6 +39,9 @@ class Product(db.Model):
 
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
+
+    sku = db.Column(db.String(100), unique=True, nullable=True)
+    barcode = db.Column(db.String(100), unique=True, nullable=True)
 
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=0)
@@ -53,7 +55,6 @@ class Product(db.Model):
         onupdate=datetime.utcnow
     )
 
-    # Relationship
     stock_adjustments = db.relationship(
         "StockAdjustment",
         backref="product",
