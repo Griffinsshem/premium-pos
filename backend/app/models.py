@@ -12,6 +12,13 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.Enum("admin", "cashier"), default="cashier")
 
+    # Relationship
+    stock_adjustments = db.relationship(
+        "StockAdjustment",
+        backref="user",
+        lazy=True
+    )
+
     # 🔐 Hash password
     def set_password(self, password):
         hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
@@ -25,7 +32,7 @@ class User(db.Model):
         )
 
 
-#  Product Model
+# Product Model
 class Product(db.Model):
     __tablename__ = "products"
 
@@ -44,4 +51,39 @@ class Product(db.Model):
         db.DateTime,
         default=datetime.utcnow,
         onupdate=datetime.utcnow
+    )
+
+    # Relationship
+    stock_adjustments = db.relationship(
+        "StockAdjustment",
+        backref="product",
+        lazy=True
+    )
+
+
+
+# Stock Adjustment Model
+class StockAdjustment(db.Model):
+    __tablename__ = "stock_adjustments"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("products.id"),
+        nullable=False
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    change = db.Column(db.Integer, nullable=False)  # +5 or -3
+    reason = db.Column(db.String(255), nullable=False)
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
     )
