@@ -23,6 +23,9 @@ export default function InventoryPage() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -34,16 +37,32 @@ export default function InventoryPage() {
   });
 
   /* =========================
+     DEBOUNCE SEARCH
+  ========================= */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  /* =========================
      FETCH PRODUCTS
   ========================= */
   const fetchProducts = async () => {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        "/api/products?page=1&per_page=5",
-        { credentials: "include" }
-      );
+      const query = new URLSearchParams({
+        page: "1",
+        per_page: "5",
+        search: debouncedSearch,
+      });
+
+      const response = await fetch(`/api/products?${query.toString()}`, {
+        credentials: "include",
+      });
 
       const data = await response.json();
 
@@ -63,7 +82,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [debouncedSearch]);
 
   /* =========================
      OPEN CREATE MODAL
@@ -140,6 +159,7 @@ export default function InventoryPage() {
 
   return (
     <div className="p-8 space-y-8">
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -157,6 +177,17 @@ export default function InventoryPage() {
         >
           + Add Product
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="flex">
+        <input
+          type="text"
+          placeholder="Search products..."
+          className="w-full max-w-md border rounded-lg px-4 py-2"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {/* Table */}
@@ -181,6 +212,7 @@ export default function InventoryPage() {
                   <th className="px-6 py-3">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {products.map((product) => (
                   <tr
@@ -190,15 +222,19 @@ export default function InventoryPage() {
                     <td className="px-6 py-4 font-medium">
                       {product.name}
                     </td>
+
                     <td className="px-6 py-4">
                       ${product.price.toFixed(2)}
                     </td>
+
                     <td className="px-6 py-4">
                       {product.stock}
                     </td>
+
                     <td className="px-6 py-4 text-gray-500">
                       {new Date(product.created_at).toLocaleDateString()}
                     </td>
+
                     <td className="px-6 py-4">
                       <button
                         onClick={() => openEditModal(product)}
@@ -217,6 +253,7 @@ export default function InventoryPage() {
                 <span>
                   Page {pagination.current_page} of {pagination.total_pages}
                 </span>
+
                 <span>
                   Total Products: {pagination.total_products}
                 </span>
@@ -235,6 +272,7 @@ export default function InventoryPage() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+
               <input
                 type="text"
                 placeholder="Product Name"
@@ -267,6 +305,7 @@ export default function InventoryPage() {
               />
 
               <div className="flex justify-end gap-3 pt-2">
+
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -286,6 +325,7 @@ export default function InventoryPage() {
                       ? "Update Product"
                       : "Create Product"}
                 </button>
+
               </div>
             </form>
           </div>
