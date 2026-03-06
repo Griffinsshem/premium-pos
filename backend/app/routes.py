@@ -230,6 +230,9 @@ def get_products():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 5, type=int)
 
+    # Get search query
+    search = request.args.get("search", "", type=str)
+
     # Safety limits
     if page < 1:
         page = 1
@@ -238,8 +241,20 @@ def get_products():
     if per_page > 50:
         per_page = 50
 
-    pagination = Product.query.filter_by(is_deleted=False) \
-        .order_by(Product.created_at.desc()) \
+    # Base query
+    query = Product.query.filter_by(is_deleted=False)
+
+    # Apply search if provided
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (Product.name.ilike(search_pattern)) |
+            (Product.sku.ilike(search_pattern)) |
+            (Product.barcode.ilike(search_pattern))
+        )
+
+    # Order + paginate
+    pagination = query.order_by(Product.created_at.desc()) \
         .paginate(page=page, per_page=per_page, error_out=False)
 
     products = pagination.items
@@ -250,6 +265,8 @@ def get_products():
                 "id": p.id,
                 "name": p.name,
                 "description": p.description,
+                "sku": p.sku,
+                "barcode": p.barcode,
                 "price": p.price,
                 "stock": p.stock,
                 "created_at": p.created_at,
