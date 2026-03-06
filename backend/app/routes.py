@@ -209,11 +209,13 @@ def create_product():
         return jsonify({"errors": errors}), 400
 
     product = Product(
-        name=data["name"].strip(),
-        description=data.get("description"),
-        price=float(data["price"]),
-        stock=int(data.get("stock", 0))
-    )
+    name=data["name"].strip(),
+    description=data.get("description"),
+    sku=data.get("sku"),
+    barcode=data.get("barcode"),
+    price=float(data["price"]),
+    stock=int(data.get("stock", 0))
+)
 
     db.session.add(product)
     db.session.commit()
