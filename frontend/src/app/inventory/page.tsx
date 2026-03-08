@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  DollarSign,
+  Package,
+  Calendar,
+  X
+} from "lucide-react";
 
 interface Product {
   id: number;
@@ -173,18 +182,24 @@ export default function InventoryPage() {
 
         <button
           onClick={openCreateModal}
-          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
         >
-          + Add Product
+          <Plus size={18} />
+          Add Product
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex">
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search
+          size={18}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        />
+
         <input
           type="text"
           placeholder="Search products..."
-          className="w-full max-w-md border rounded-lg px-4 py-2"
+          className="w-full border rounded-lg pl-10 pr-4 py-2"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -206,9 +221,19 @@ export default function InventoryPage() {
               <thead className="bg-gray-100 border-b">
                 <tr>
                   <th className="px-6 py-3">Name</th>
-                  <th className="px-6 py-3">Price</th>
-                  <th className="px-6 py-3">Stock</th>
-                  <th className="px-6 py-3">Created</th>
+
+                  <th className="px-6 py-3 flex items-center gap-1">
+                    <DollarSign size={16} /> Price
+                  </th>
+
+                  <th className="px-6 py-3 flex items-center gap-1">
+                    <Package size={16} /> Stock
+                  </th>
+
+                  <th className="px-6 py-3 flex items-center gap-1">
+                    <Calendar size={16} /> Created
+                  </th>
+
                   <th className="px-6 py-3">Actions</th>
                 </tr>
               </thead>
@@ -238,8 +263,9 @@ export default function InventoryPage() {
                     <td className="px-6 py-4">
                       <button
                         onClick={() => openEditModal(product)}
-                        className="text-blue-600 hover:underline"
+                        className="flex items-center gap-1 text-blue-600 hover:underline"
                       >
+                        <Pencil size={16} />
                         Edit
                       </button>
                     </td>
@@ -286,6 +312,7 @@ export default function InventoryPage() {
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 placeholder="Price"
                 className="w-full border rounded-lg px-3 py-2"
                 value={formData.price}
@@ -296,6 +323,7 @@ export default function InventoryPage() {
 
               <input
                 type="number"
+                min="0"
                 placeholder="Stock"
                 className="w-full border rounded-lg px-3 py-2"
                 value={formData.stock}
@@ -309,8 +337,9 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border"
+                  className="flex items-center gap-1 px-4 py-2 rounded-lg border"
                 >
+                  <X size={16} />
                   Cancel
                 </button>
 
