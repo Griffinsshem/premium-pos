@@ -220,21 +220,30 @@ export default function InventoryPage() {
             <table className="min-w-full text-sm text-left">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3">Name</th>
+                  <th className="px-6 py-3 text-left">Name</th>
 
-                  <th className="px-6 py-3 flex items-center gap-1">
-                    <DollarSign size={16} /> Price
+                  <th className="px-6 py-3 text-left">
+                    <div className="flex items-center gap-1">
+                      <DollarSign size={16} />
+                      Price
+                    </div>
                   </th>
 
-                  <th className="px-6 py-3 flex items-center gap-1">
-                    <Package size={16} /> Stock
+                  <th className="px-6 py-3 text-left">
+                    <div className="flex items-center gap-1">
+                      <Package size={16} />
+                      Stock
+                    </div>
                   </th>
 
-                  <th className="px-6 py-3 flex items-center gap-1">
-                    <Calendar size={16} /> Created
+                  <th className="px-6 py-3 text-left">
+                    <div className="flex items-center gap-1">
+                      <Calendar size={16} />
+                      Created
+                    </div>
                   </th>
 
-                  <th className="px-6 py-3">Actions</th>
+                  <th className="px-6 py-3 text-left">Actions</th>
                 </tr>
               </thead>
 
