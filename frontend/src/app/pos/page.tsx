@@ -46,6 +46,12 @@ export default function POSPage() {
     });
   };
 
+  // Calculate subtotal
+  const subtotal = cart.reduce(
+    (total, item) => total + item.price * item.qty,
+    0
+  );
+
   return (
     <div className="h-screen flex flex-col">
 
@@ -135,7 +141,7 @@ export default function POSPage() {
 
             <div className="flex justify-between text-lg font-semibold">
               <span>Total</span>
-              <span>$0.00</span>
+              <span>${subtotal.toFixed(2)}</span>
             </div>
 
             <button className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition">
