@@ -11,10 +11,10 @@ export default function POSPage() {
 
       {/* Header */}
       <div className="border-b px-6 py-4 flex justify-between items-center bg-white">
-        <h1 className="text-2xl font-bold">POS Terminal</h1>
+        <h1 className="text-2xl font-bold">TruVend Terminal</h1>
 
         <div className="text-sm text-gray-500">
-          Premium POS System
+          TruVend System
         </div>
       </div>
 
