@@ -46,6 +46,26 @@ export default function POSPage() {
     });
   };
 
+  // Increase quantity
+  const increaseQty = (id: number) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, qty: item.qty + 1 } : item
+      )
+    );
+  };
+
+  // Decrease quantity
+  const decreaseQty = (id: number) => {
+    setCart((prev) =>
+      prev
+        .map((item) =>
+          item.id === id ? { ...item, qty: item.qty - 1 } : item
+        )
+        .filter((item) => item.qty > 0)
+    );
+  };
+
   // Calculate subtotal
   const subtotal = cart.reduce(
     (total, item) => total + item.price * item.qty,
@@ -121,16 +141,40 @@ export default function POSPage() {
           </div>
 
           {/* Cart Items */}
-          <div className="flex-1 border rounded-lg p-4 bg-gray-50">
+          <div className="flex-1 border rounded-lg p-4 bg-gray-50 space-y-3">
             {cart.length === 0 ? (
               <p className="text-sm text-gray-500">
                 Cart is empty
               </p>
             ) : (
               cart.map((item) => (
-                <div key={item.id} className="flex justify-between mb-2">
-                  <span>{item.name}</span>
-                  <span>x{item.qty}</span>
+                <div
+                  key={item.id}
+                  className="flex justify-between items-center bg-white border rounded-md px-3 py-2"
+                >
+                  <span className="font-medium">{item.name}</span>
+
+                  <div className="flex items-center gap-2">
+
+                    <button
+                      onClick={() => decreaseQty(item.id)}
+                      className="px-2 py-1 border rounded hover:bg-gray-100"
+                    >
+                      -
+                    </button>
+
+                    <span className="w-6 text-center">
+                      {item.qty}
+                    </span>
+
+                    <button
+                      onClick={() => increaseQty(item.id)}
+                      className="px-2 py-1 border rounded hover:bg-gray-100"
+                    >
+                      +
+                    </button>
+
+                  </div>
                 </div>
               ))
             )}
