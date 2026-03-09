@@ -24,7 +24,7 @@ export default function POSPage() {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Discount state (Day 13 Step 2)
+  // Discount state
   const [discount, setDiscount] = useState(0);
 
   // Mock products (temporary for testing)
@@ -71,11 +71,28 @@ export default function POSPage() {
     );
   };
 
-  // Calculate subtotal
-  const subtotal = cart.reduce(
-    (total, item) => total + item.price * item.qty,
-    0
-  );
+  // 🧮 Cart Calculation Function (Day 13 Step 3)
+  const calculateCartTotals = () => {
+    const subtotal = cart.reduce(
+      (total, item) => total + item.price * item.qty,
+      0
+    );
+
+    const tax = subtotal * TAX_RATE;
+
+    const discountAmount = discount;
+
+    const total = subtotal + tax - discountAmount;
+
+    return {
+      subtotal,
+      tax,
+      discount: discountAmount,
+      total,
+    };
+  };
+
+  const totals = calculateCartTotals();
 
   return (
     <div className="h-screen flex flex-col">
@@ -185,15 +202,36 @@ export default function POSPage() {
             )}
           </div>
 
-          {/* Total */}
-          <div className="mt-6 border-t pt-4 space-y-3">
+          {/* Totals */}
+          <div className="mt-6 border-t pt-4 space-y-2 text-sm">
 
-            <div className="flex justify-between text-lg font-semibold">
-              <span>Total</span>
-              <span>${subtotal.toFixed(2)}</span>
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>${totals.subtotal.toFixed(2)}</span>
             </div>
 
-            <button className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition">
+            <div className="flex justify-between">
+              <span>Tax (16%)</span>
+              <span>${totals.tax.toFixed(2)}</span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span>Discount</span>
+
+              <input
+                type="number"
+                value={discount}
+                onChange={(e) => setDiscount(Number(e.target.value))}
+                className="w-20 border rounded px-2 py-1 text-right"
+              />
+            </div>
+
+            <div className="flex justify-between text-lg font-semibold pt-2 border-t">
+              <span>Total</span>
+              <span>${totals.total.toFixed(2)}</span>
+            </div>
+
+            <button className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition mt-3">
               Checkout
             </button>
 
