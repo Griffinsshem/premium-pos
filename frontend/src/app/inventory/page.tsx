@@ -8,7 +8,8 @@ import {
   DollarSign,
   Package,
   Calendar,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 
 interface Product {
@@ -35,6 +36,8 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  const [page, setPage] = useState(1);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -51,6 +54,7 @@ export default function InventoryPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setPage(1);
     }, 500);
 
     return () => clearTimeout(timer);
@@ -64,7 +68,7 @@ export default function InventoryPage() {
       setLoading(true);
 
       const query = new URLSearchParams({
-        page: "1",
+        page: page.toString(),
         per_page: "5",
         search: debouncedSearch,
       });
@@ -91,7 +95,33 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, page]);
+
+  /* =========================
+     DELETE PRODUCT
+  ========================= */
+  const handleDelete = async (productId: number) => {
+    const confirmed = confirm("Are you sure you want to delete this product?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Delete failed");
+        return;
+      }
+
+      await fetchProducts();
+    } catch (error) {
+      alert("Something went wrong");
+    }
+  };
 
   /* =========================
      OPEN CREATE MODAL
@@ -116,7 +146,7 @@ export default function InventoryPage() {
   };
 
   /* =========================
-     SUBMIT (CREATE OR UPDATE)
+     SUBMIT
   ========================= */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,30 +250,30 @@ export default function InventoryPage() {
             <table className="min-w-full text-sm text-left">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left">Name</th>
+                  <th className="px-6 py-3">Name</th>
 
-                  <th className="px-6 py-3 text-left">
+                  <th className="px-6 py-3">
                     <div className="flex items-center gap-1">
                       <DollarSign size={16} />
                       Price
                     </div>
                   </th>
 
-                  <th className="px-6 py-3 text-left">
+                  <th className="px-6 py-3">
                     <div className="flex items-center gap-1">
                       <Package size={16} />
                       Stock
                     </div>
                   </th>
 
-                  <th className="px-6 py-3 text-left">
+                  <th className="px-6 py-3">
                     <div className="flex items-center gap-1">
                       <Calendar size={16} />
                       Created
                     </div>
                   </th>
 
-                  <th className="px-6 py-3 text-left">Actions</th>
+                  <th className="px-6 py-3">Actions</th>
                 </tr>
               </thead>
 
@@ -262,7 +292,15 @@ export default function InventoryPage() {
                     </td>
 
                     <td className="px-6 py-4">
-                      {product.stock}
+                      <div className="flex items-center gap-2">
+                        {product.stock}
+
+                        {product.stock < 10 && (
+                          <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                            Low
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-6 py-4 text-gray-500">
@@ -270,13 +308,25 @@ export default function InventoryPage() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => openEditModal(product)}
-                        className="flex items-center gap-1 text-blue-600 hover:underline"
-                      >
-                        <Pencil size={16} />
-                        Edit
-                      </button>
+                      <div className="flex items-center gap-4">
+
+                        <button
+                          onClick={() => openEditModal(product)}
+                          className="flex items-center gap-1 text-blue-600 hover:underline"
+                        >
+                          <Pencil size={16} />
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="flex items-center gap-1 text-red-600 hover:underline"
+                        >
+                          <Trash2 size={16} />
+                          Delete
+                        </button>
+
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -284,14 +334,28 @@ export default function InventoryPage() {
             </table>
 
             {pagination && (
-              <div className="px-6 py-4 bg-gray-50 text-sm text-gray-600 flex justify-between">
+              <div className="px-6 py-4 bg-gray-50 flex items-center justify-between text-sm">
+
+                <button
+                  disabled={!pagination.has_prev}
+                  onClick={() => setPage(page - 1)}
+                  className="px-3 py-1 border rounded disabled:opacity-40"
+                >
+                  Previous
+                </button>
+
                 <span>
                   Page {pagination.current_page} of {pagination.total_pages}
                 </span>
 
-                <span>
-                  Total Products: {pagination.total_products}
-                </span>
+                <button
+                  disabled={!pagination.has_next}
+                  onClick={() => setPage(page + 1)}
+                  className="px-3 py-1 border rounded disabled:opacity-40"
+                >
+                  Next
+                </button>
+
               </div>
             )}
           </>
