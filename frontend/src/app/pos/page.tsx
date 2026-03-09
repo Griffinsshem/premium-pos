@@ -3,6 +3,8 @@
 import { Search, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 
+const TAX_RATE = 0.16;
+
 interface CartItem {
   id: number;
   name: string;
