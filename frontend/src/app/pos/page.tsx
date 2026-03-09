@@ -3,8 +3,18 @@
 import { Search, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 
+interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  qty: number;
+}
+
 export default function POSPage() {
   const [search, setSearch] = useState("");
+
+  // Cart state (Day 12 Step 1)
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -59,9 +69,18 @@ export default function POSPage() {
 
           {/* Cart Items */}
           <div className="flex-1 border rounded-lg p-4 bg-gray-50">
-            <p className="text-sm text-gray-500">
-              Cart is empty
-            </p>
+            {cart.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                Cart is empty
+              </p>
+            ) : (
+              cart.map((item) => (
+                <div key={item.id} className="flex justify-between mb-2">
+                  <span>{item.name}</span>
+                  <span>x{item.qty}</span>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Total */}
