@@ -10,11 +10,41 @@ interface CartItem {
   qty: number;
 }
 
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
 export default function POSPage() {
   const [search, setSearch] = useState("");
 
-  // Cart state (Day 12 Step 1)
+  // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Mock products (temporary for testing)
+  const products: Product[] = [
+    { id: 1, name: "Nike Air", price: 120 },
+    { id: 2, name: "Adidas Run", price: 95 },
+    { id: 3, name: "Jordan 4", price: 150 },
+  ];
+
+  // Add product to cart
+  const addToCart = (product: Product) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id
+            ? { ...item, qty: item.qty + 1 }
+            : item
+        );
+      }
+
+      return [...prev, { ...product, qty: 1 }];
+    });
+  };
 
   return (
     <div className="h-screen flex flex-col">
@@ -51,10 +81,27 @@ export default function POSPage() {
           </div>
 
           {/* Product List */}
-          <div className="flex-1 overflow-y-auto border rounded-lg p-4 bg-gray-50">
-            <p className="text-gray-500 text-sm">
-              Products will appear here
-            </p>
+          <div className="flex-1 overflow-y-auto border rounded-lg p-4 bg-gray-50 space-y-3">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="flex justify-between items-center bg-white border rounded-lg p-3"
+              >
+                <div>
+                  <p className="font-medium">{product.name}</p>
+                  <p className="text-sm text-gray-500">
+                    ${product.price}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => addToCart(product)}
+                  className="bg-black text-white px-3 py-1 rounded-md text-sm hover:bg-gray-800"
+                >
+                  Add
+                </button>
+              </div>
+            ))}
           </div>
 
         </div>
