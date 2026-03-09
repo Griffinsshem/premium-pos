@@ -24,6 +24,9 @@ export default function POSPage() {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
 
+  // Discount state (Day 13 Step 2)
+  const [discount, setDiscount] = useState(0);
+
   // Mock products (temporary for testing)
   const products: Product[] = [
     { id: 1, name: "Nike Air", price: 120 },
