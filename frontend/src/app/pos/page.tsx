@@ -27,7 +27,7 @@ export default function POSPage() {
   // Discount state
   const [discount, setDiscount] = useState(0);
 
-  // Mock products (temporary for testing)
+  // Mock products
   const products: Product[] = [
     { id: 1, name: "Nike Air", price: 120 },
     { id: 2, name: "Adidas Run", price: 95 },
@@ -71,7 +71,13 @@ export default function POSPage() {
     );
   };
 
-  // 🧮 Cart Calculation Function (Day 13 Step 3)
+  // Clear cart 
+  const clearCart = () => {
+    setCart([]);
+    setDiscount(0);
+  };
+
+  // Cart calculation function
   const calculateCartTotals = () => {
     const subtotal = cart.reduce(
       (total, item) => total + item.price * item.qty,
@@ -231,9 +237,21 @@ export default function POSPage() {
               <span>${totals.total.toFixed(2)}</span>
             </div>
 
-            <button className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition mt-3">
-              Checkout
-            </button>
+            {/* Clear + Checkout */}
+            <div className="flex gap-2 mt-3">
+
+              <button
+                onClick={clearCart}
+                className="w-1/2 border py-3 rounded-lg hover:bg-gray-100 transition"
+              >
+                Clear
+              </button>
+
+              <button className="w-1/2 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition">
+                Checkout
+              </button>
+
+            </div>
 
           </div>
 
