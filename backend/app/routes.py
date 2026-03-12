@@ -402,3 +402,38 @@ def adjust_stock():
             "adjusted_by": current_user["id"]
         }
     }), 200
+
+
+# ==============================
+# SALES ROUTES (POS)
+# ==============================
+
+@main.route("/sales", methods=["POST"])
+def create_sale():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    items = data.get("items")
+    subtotal = data.get("subtotal")
+    tax = data.get("tax")
+    discount = data.get("discount")
+    total = data.get("total")
+
+    if not items or total is None:
+        return jsonify({
+            "error": "items and total are required"
+        }), 400
+
+    # Temporary response (DB insert comes in next step)
+    return jsonify({
+        "message": "Sale received successfully",
+        "sale": {
+            "items": items,
+            "subtotal": subtotal,
+            "tax": tax,
+            "discount": discount,
+            "total": total
+        }
+    }), 201
