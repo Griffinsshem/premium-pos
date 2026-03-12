@@ -61,9 +61,60 @@ class Product(db.Model):
         lazy=True
     )
 
+    # Relationship to sale items
+    sale_items = db.relationship(
+        "SaleItem",
+        backref="product",
+        lazy=True
+    )
 
 
-# Stock Adjustment Model
+class Sale(db.Model):
+    __tablename__ = "sales"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    subtotal = db.Column(db.Float, nullable=False)
+    tax = db.Column(db.Float, nullable=False)
+    discount = db.Column(db.Float, default=0)
+    total = db.Column(db.Float, nullable=False)
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    # Relationship
+    items = db.relationship(
+        "SaleItem",
+        backref="sale",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+
+class SaleItem(db.Model):
+    __tablename__ = "sale_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    sale_id = db.Column(
+        db.Integer,
+        db.ForeignKey("sales.id"),
+        nullable=False
+    )
+
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("products.id"),
+        nullable=False
+    )
+
+    qty = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+
+
+
 class StockAdjustment(db.Model):
     __tablename__ = "stock_adjustments"
 
