@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from .models import User, Product, StockAdjustment
+from .models import User, Product, StockAdjustment, Sale, SaleItem
 from . import db
 
 main = Blueprint("main", __name__)
@@ -426,14 +426,43 @@ def create_sale():
             "error": "items and total are required"
         }), 400
 
-    # Temporary response (DB insert comes in next step)
+    # create sale
+    sale = Sale(
+        subtotal=subtotal,
+        tax=tax,
+        discount=discount,
+        total=total
+    )
+    db.session.add(sale)
+    db.session.flush()  # Get sale ID before commit
+
+    # create sale items
+    for item in items:
+        
+        product = Product.query.get(item["product_id"])
+        if not product:
+            return jsonify({"error": f"Product {item['product_id']} not found"}), 404
+        
+        if product.stock < item["qty"]:
+            return jsonify({
+                "error": f"Insufficient stock for product {product.name}",
+                "available_stock": product.stock
+            }), 400
+        
+        sale_item = SaleItem(
+            sale_id=sale.id,
+            product_id=item["product_id"],
+            qty=item["qty"],
+            price=item["price"]
+        )
+
+        #reduce stock
+        product.stock -= item["qty"]
+        db.session.add(sale_item)
+    
+    db.session.commit()
+
     return jsonify({
-        "message": "Sale received successfully",
-        "sale": {
-            "items": items,
-            "subtotal": subtotal,
-            "tax": tax,
-            "discount": discount,
-            "total": total
-        }
+        "message": "Sale completed successfully",
+        "sale_id": sale.id
     }), 201
