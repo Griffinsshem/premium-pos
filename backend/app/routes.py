@@ -196,7 +196,7 @@ def validate_product_data(data, is_update=False):
 
 
 # ==============================
-# PRODUCT ROUTES (WITH PAGINATION)
+# PRODUCT ROUTES
 # ==============================
 
 @main.route("/products", methods=["POST"])
@@ -209,125 +209,18 @@ def create_product():
         return jsonify({"errors": errors}), 400
 
     product = Product(
-    name=data["name"].strip(),
-    description=data.get("description"),
-    sku=data.get("sku"),
-    barcode=data.get("barcode"),
-    price=float(data["price"]),
-    stock=int(data.get("stock", 0))
-)
+        name=data["name"].strip(),
+        description=data.get("description"),
+        sku=data.get("sku"),
+        barcode=data.get("barcode"),
+        price=float(data["price"]),
+        stock=int(data.get("stock", 0))
+    )
 
     db.session.add(product)
     db.session.commit()
 
     return jsonify({"message": "Product created successfully"}), 201
-
-
-@main.route("/products", methods=["GET"])
-@jwt_required()
-def get_products():
-    # Get pagination parameters
-    page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 5, type=int)
-
-    # Get search query
-    search = request.args.get("search", "", type=str)
-
-    # Safety limits
-    if page < 1:
-        page = 1
-    if per_page < 1:
-        per_page = 5
-    if per_page > 50:
-        per_page = 50
-
-    # Base query
-    query = Product.query.filter_by(is_deleted=False)
-
-    # Apply search if provided
-    if search:
-        search_pattern = f"%{search}%"
-        query = query.filter(
-            (Product.name.ilike(search_pattern)) |
-            (Product.sku.ilike(search_pattern)) |
-            (Product.barcode.ilike(search_pattern))
-        )
-
-    # Order + paginate
-    pagination = query.order_by(Product.created_at.desc()) \
-        .paginate(page=page, per_page=per_page, error_out=False)
-
-    products = pagination.items
-
-    return jsonify({
-        "products": [
-            {
-                "id": p.id,
-                "name": p.name,
-                "description": p.description,
-                "sku": p.sku,
-                "barcode": p.barcode,
-                "price": p.price,
-                "stock": p.stock,
-                "created_at": p.created_at,
-                "updated_at": p.updated_at
-            }
-            for p in products
-        ],
-        "pagination": {
-            "total_products": pagination.total,
-            "total_pages": pagination.pages,
-            "current_page": pagination.page,
-            "per_page": pagination.per_page,
-            "has_next": pagination.has_next,
-            "has_prev": pagination.has_prev
-        }
-    })
-
-
-@main.route("/products/<int:product_id>", methods=["PUT"])
-@jwt_required()
-def update_product(product_id):
-    product = Product.query.get(product_id)
-
-    if not product or product.is_deleted:
-        return jsonify({"error": "Product not found"}), 404
-
-    data = request.get_json()
-
-    errors = validate_product_data(data, is_update=True)
-    if errors:
-        return jsonify({"errors": errors}), 400
-
-    if "name" in data:
-        product.name = data["name"].strip()
-
-    if "description" in data:
-        product.description = data["description"]
-
-    if "price" in data:
-        product.price = float(data["price"])
-
-    if "stock" in data:
-        product.stock = int(data["stock"])
-
-    db.session.commit()
-
-    return jsonify({"message": "Product updated successfully"})
-
-
-@main.route("/products/<int:product_id>", methods=["DELETE"])
-@jwt_required()
-def delete_product(product_id):
-    product = Product.query.get(product_id)
-
-    if not product or product.is_deleted:
-        return jsonify({"error": "Product not found"}), 404
-
-    product.is_deleted = True
-    db.session.commit()
-
-    return jsonify({"message": "Product deleted successfully"})
 
 
 # ==============================
@@ -339,73 +232,27 @@ def delete_product(product_id):
 def adjust_stock():
     data = request.get_json()
 
-    if not data:
-        return jsonify({"error": "Request body required"}), 400
+    product = Product.query.get(data["product_id"])
 
-    product_id = data.get("product_id")
-    change = data.get("change")
-    reason = data.get("reason")
-
-    # Validate required fields
-    if product_id is None or change is None or not reason:
-        return jsonify({
-            "error": "product_id, change, and reason are required"
-        }), 400
-
-    # Find product
-    product = Product.query.get(product_id)
-
-    if not product or product.is_deleted:
-        return jsonify({"error": "Product not found"}), 404
-
-    # Validate change value
-    try:
-        change = int(change)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Change must be an integer"}), 400
-
-    # Prevent stock from going below zero
-    new_stock = product.stock + change
-    if new_stock < 0:
-        return jsonify({
-            "error": "Stock adjustment failed. Stock cannot go below 0",
-            "current_stock": product.stock
-        }), 400
-
-    # Get logged-in user
     current_user = get_jwt_identity()
 
-    # Update stock
-    product.stock = new_stock
+    product.stock += data["change"]
 
-    # Log adjustment
     adjustment = StockAdjustment(
         product_id=product.id,
         user_id=current_user["id"],
-        change=change,
-        reason=reason
+        change=data["change"],
+        reason=data["reason"]
     )
 
     db.session.add(adjustment)
     db.session.commit()
 
-    return jsonify({
-        "message": "Stock adjusted successfully",
-        "product": {
-            "id": product.id,
-            "name": product.name,
-            "new_stock": product.stock
-        },
-        "adjustment": {
-            "change": change,
-            "reason": reason,
-            "adjusted_by": current_user["id"]
-        }
-    }), 200
+    return jsonify({"message": "Stock adjusted successfully"})
 
 
 # ==============================
-# SALES ROUTES (POS)
+# SALES ROUTES
 # ==============================
 
 @main.route("/sales", methods=["POST"])
@@ -426,29 +273,29 @@ def create_sale():
             "error": "items and total are required"
         }), 400
 
-    # create sale
     sale = Sale(
         subtotal=subtotal,
         tax=tax,
         discount=discount,
         total=total
     )
-    db.session.add(sale)
-    db.session.flush()  # Get sale ID before commit
 
-    # create sale items
+    db.session.add(sale)
+    db.session.flush()
+
     for item in items:
-        
+
         product = Product.query.get(item["product_id"])
+
         if not product:
             return jsonify({"error": f"Product {item['product_id']} not found"}), 404
-        
+
         if product.stock < item["qty"]:
             return jsonify({
                 "error": f"Insufficient stock for product {product.name}",
                 "available_stock": product.stock
             }), 400
-        
+
         sale_item = SaleItem(
             sale_id=sale.id,
             product_id=item["product_id"],
@@ -456,10 +303,20 @@ def create_sale():
             price=item["price"]
         )
 
-        #reduce stock
+        # Reduce stock
         product.stock -= item["qty"]
+
+        # Log stock movement
+        adjustment = StockAdjustment(
+            product_id=product.id,
+            user_id=1,
+            change=-item["qty"],
+            reason="sale"
+        )
+
         db.session.add(sale_item)
-    
+        db.session.add(adjustment)
+
     db.session.commit()
 
     return jsonify({
