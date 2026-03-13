@@ -213,9 +213,12 @@ def adjust_stock():
 # ==============================
 
 @main.route("/sales", methods=["POST"])
+@jwt_required()
 def create_sale():
 
     try:
+
+        current_user = get_jwt_identity()
 
         data = request.get_json()
 
@@ -234,6 +237,7 @@ def create_sale():
             }), 400
 
         sale = Sale(
+            user_id=current_user["id"],
             subtotal=subtotal,
             tax=tax,
             discount=discount,
@@ -260,13 +264,11 @@ def create_sale():
                 price=item["price"]
             )
 
-            # Reduce stock
             product.stock -= item["qty"]
 
-            # Log stock movement
             adjustment = StockAdjustment(
                 product_id=product.id,
-                user_id=1,
+                user_id=current_user["id"],
                 change=-item["qty"],
                 reason="sale"
             )
