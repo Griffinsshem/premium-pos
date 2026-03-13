@@ -158,44 +158,6 @@ def protected():
 
 
 # ==============================
-# PRODUCT VALIDATION
-# ==============================
-
-def validate_product_data(data, is_update=False):
-    errors = []
-
-    if not data:
-        errors.append("Request body is required")
-        return errors
-
-    if not is_update or "name" in data:
-        name = data.get("name")
-        if not name or not isinstance(name, str) or len(name.strip()) == 0:
-            errors.append("Valid product name is required")
-        elif len(name) > 100:
-            errors.append("Product name cannot exceed 100 characters")
-
-    if not is_update or "price" in data:
-        price = data.get("price")
-        try:
-            price = float(price)
-            if price <= 0:
-                errors.append("Price must be greater than 0")
-        except (TypeError, ValueError):
-            errors.append("Price must be a valid number")
-
-    if "stock" in data:
-        try:
-            stock = int(data.get("stock"))
-            if stock < 0:
-                errors.append("Stock cannot be negative")
-        except (TypeError, ValueError):
-            errors.append("Stock must be an integer")
-
-    return errors
-
-
-# ==============================
 # PRODUCT ROUTES
 # ==============================
 
@@ -203,10 +165,6 @@ def validate_product_data(data, is_update=False):
 @jwt_required()
 def create_product():
     data = request.get_json()
-
-    errors = validate_product_data(data)
-    if errors:
-        return jsonify({"errors": errors}), 400
 
     product = Product(
         name=data["name"].strip(),
@@ -233,7 +191,6 @@ def adjust_stock():
     data = request.get_json()
 
     product = Product.query.get(data["product_id"])
-
     current_user = get_jwt_identity()
 
     product.stock += data["change"]
@@ -257,69 +214,78 @@ def adjust_stock():
 
 @main.route("/sales", methods=["POST"])
 def create_sale():
-    data = request.get_json()
 
-    if not data:
-        return jsonify({"error": "Request body required"}), 400
+    try:
 
-    items = data.get("items")
-    subtotal = data.get("subtotal")
-    tax = data.get("tax")
-    discount = data.get("discount")
-    total = data.get("total")
+        data = request.get_json()
 
-    if not items or total is None:
-        return jsonify({
-            "error": "items and total are required"
-        }), 400
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
 
-    sale = Sale(
-        subtotal=subtotal,
-        tax=tax,
-        discount=discount,
-        total=total
-    )
+        items = data.get("items")
+        subtotal = data.get("subtotal")
+        tax = data.get("tax")
+        discount = data.get("discount")
+        total = data.get("total")
 
-    db.session.add(sale)
-    db.session.flush()
-
-    for item in items:
-
-        product = Product.query.get(item["product_id"])
-
-        if not product:
-            return jsonify({"error": f"Product {item['product_id']} not found"}), 404
-
-        if product.stock < item["qty"]:
+        if not items or total is None:
             return jsonify({
-                "error": f"Insufficient stock for product {product.name}",
-                "available_stock": product.stock
+                "error": "items and total are required"
             }), 400
 
-        sale_item = SaleItem(
-            sale_id=sale.id,
-            product_id=item["product_id"],
-            qty=item["qty"],
-            price=item["price"]
+        sale = Sale(
+            subtotal=subtotal,
+            tax=tax,
+            discount=discount,
+            total=total
         )
 
-        # Reduce stock
-        product.stock -= item["qty"]
+        db.session.add(sale)
+        db.session.flush()
 
-        # Log stock movement
-        adjustment = StockAdjustment(
-            product_id=product.id,
-            user_id=1,
-            change=-item["qty"],
-            reason="sale"
-        )
+        for item in items:
 
-        db.session.add(sale_item)
-        db.session.add(adjustment)
+            product = Product.query.get(item["product_id"])
 
-    db.session.commit()
+            if not product:
+                raise Exception(f"Product {item['product_id']} not found")
 
-    return jsonify({
-        "message": "Sale completed successfully",
-        "sale_id": sale.id
-    }), 201
+            if product.stock < item["qty"]:
+                raise Exception(f"Insufficient stock for {product.name}")
+
+            sale_item = SaleItem(
+                sale_id=sale.id,
+                product_id=item["product_id"],
+                qty=item["qty"],
+                price=item["price"]
+            )
+
+            # Reduce stock
+            product.stock -= item["qty"]
+
+            # Log stock movement
+            adjustment = StockAdjustment(
+                product_id=product.id,
+                user_id=1,
+                change=-item["qty"],
+                reason="sale"
+            )
+
+            db.session.add(sale_item)
+            db.session.add(adjustment)
+
+        db.session.commit()
+
+        return jsonify({
+            "message": "Sale completed successfully",
+            "sale_id": sale.id
+        }), 201
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+            "error": "Sale failed",
+            "details": str(e)
+        }), 400
