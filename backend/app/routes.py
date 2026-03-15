@@ -181,6 +181,54 @@ def create_product():
     return jsonify({"message": "Product created successfully"}), 201
 
 
+@main.route("/products", methods=["GET"])
+def get_products():
+
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 5, type=int)
+    search = request.args.get("search", "", type=str)
+
+    query = Product.query
+
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (Product.name.ilike(search_pattern)) |
+            (Product.sku.ilike(search_pattern)) |
+            (Product.barcode.ilike(search_pattern))
+        )
+
+    pagination = query.order_by(Product.created_at.desc()) \
+        .paginate(page=page, per_page=per_page, error_out=False)
+
+    products = pagination.items
+
+    return jsonify({
+        "products": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "description": p.description,
+                "sku": p.sku,
+                "barcode": p.barcode,
+                "price": p.price,
+                "stock": p.stock,
+                "created_at": p.created_at,
+                "updated_at": p.updated_at
+            }
+            for p in products
+        ],
+        "pagination": {
+            "total_products": pagination.total,
+            "total_pages": pagination.pages,
+            "current_page": pagination.page,
+            "per_page": pagination.per_page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }
+    })
+
+
 # ==============================
 # STOCK ADJUSTMENT ROUTES
 # ==============================
