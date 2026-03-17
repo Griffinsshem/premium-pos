@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from .models import User, Product, StockAdjustment, Sale, SaleItem
+from .models import User, Product, StockAdjustment, Sale, SaleItem, Payment
 from . import db
 
 main = Blueprint("main", __name__)
@@ -337,5 +337,82 @@ def create_sale():
 
         return jsonify({
             "error": "Sale failed",
+            "details": str(e)
+        }), 400
+    
+
+# ==============================
+# PAYMENT ROUTES
+# ==============================
+
+@main.route("/payments", methods=["POST"])
+@jwt_required()
+def create_payment():
+
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
+
+        sale_id = data.get("sale_id")
+        amount_paid = data.get("amount_paid")
+        payment_method = data.get("payment_method", "cash")
+
+        # Validate inputs
+        if not sale_id or amount_paid is None:
+            return jsonify({
+                "error": "sale_id and amount_paid are required"
+            }), 400
+
+        sale = Sale.query.get(sale_id)
+
+        if not sale:
+            return jsonify({"error": "Sale not found"}), 404
+
+        if sale.status == "paid":
+            return jsonify({"error": "Sale already paid"}), 400
+
+        # Calculate balance
+        balance = amount_paid - sale.total
+
+        if balance < 0:
+            return jsonify({
+                "error": "Insufficient payment",
+                "required": sale.total,
+                "paid": amount_paid
+            }), 400
+
+        # Create payment record
+        payment = Payment(
+            sale_id=sale.id,
+            amount_paid=amount_paid,
+            balance=balance,
+            payment_method=payment_method
+        )
+
+        # Mark sale as paid
+        sale.status = "paid"
+
+        db.session.add(payment)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Payment successful",
+            "payment": {
+                "sale_id": sale.id,
+                "total": sale.total,
+                "paid": amount_paid,
+                "balance": balance,
+                "method": payment_method
+            }
+        }), 201
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+            "error": "Payment failed",
             "details": str(e)
         }), 400
