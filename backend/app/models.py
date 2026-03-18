@@ -143,14 +143,22 @@ class Payment(db.Model):
         nullable=False
     )
 
-    amount_paid = db.Column(db.Float, nullable=False)
+    amount_paid = db.Column(db.Float, nullable=False, default=0)
 
-    balance = db.Column(db.Float, nullable=False)
+    balance = db.Column(db.Float, nullable=False, default=0)
 
     payment_method = db.Column(
-        db.Enum("cash", "card"),
+        db.Enum("cash", "card", "mpesa"),
         default="cash"
     )
+
+    status = db.Column(
+        db.Enum("pending", "completed"),
+        default="pending"
+    )
+
+    transaction_id = db.Column(db.String(255), nullable=True)
+    phone_number = db.Column(db.String(20), nullable=True)
 
     created_at = db.Column(
         db.DateTime,
