@@ -3,7 +3,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from .models import User, Product, StockAdjustment, Sale, SaleItem, Payment
 import requests
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import current_app
 from . import db
 
@@ -546,3 +546,61 @@ def mpesa_stk():
             "error": "STK push failed",
             "details": str(e)
         }), 400
+    
+
+# ==============================
+# DASHBOARD METRICS
+# ==============================
+
+@main.route("/dashboard/metrics", methods=["GET"])
+@jwt_required()
+def dashboard_metrics():
+    try:
+        now = datetime.utcnow()
+
+        # Start of today (00:00)
+        start_of_today = datetime(now.year, now.month, now.day)
+
+        # Start of week (Monday)
+        start_of_week = start_of_today - timedelta(days=start_of_today.weekday())
+
+        # -------------------------
+        # TODAY SALES
+        # -------------------------
+        today_sales = db.session.query(
+            db.func.coalesce(db.func.sum(Sale.total), 0)
+        ).filter(
+            Sale.created_at >= start_of_today,
+            Sale.status == "paid"
+        ).scalar()
+
+        # -------------------------
+        # WEEKLY SALES
+        # -------------------------
+        weekly_sales = db.session.query(
+            db.func.coalesce(db.func.sum(Sale.total), 0)
+        ).filter(
+            Sale.created_at >= start_of_week,
+            Sale.status == "paid"
+        ).scalar()
+
+        # -------------------------
+        # TRANSACTION COUNT
+        # -------------------------
+        transaction_count = db.session.query(
+            db.func.count(Sale.id)
+        ).filter(
+            Sale.created_at >= start_of_today
+        ).scalar()
+
+        return jsonify({
+            "today_sales": float(today_sales),
+            "weekly_sales": float(weekly_sales),
+            "transactions_today": transaction_count
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to fetch metrics",
+            "details": str(e)
+        }), 500
