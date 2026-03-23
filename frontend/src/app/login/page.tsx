@@ -23,7 +23,7 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // ✅ IMPORTANT FIX
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -35,6 +35,7 @@ export default function LoginPage() {
         return;
       }
 
+      localStorage.setItem("token", data.acess_token);
       router.push("/dashboard");
     } catch (err) {
       setError("Something went wrong");
