@@ -392,7 +392,8 @@ def create_payment():
             sale_id=sale.id,
             amount_paid=amount_paid,
             balance=balance,
-            payment_method=payment_method
+            payment_method=payment_method,
+            status="completed"
         )
 
         # Mark sale as paid
@@ -640,5 +641,38 @@ def sales_by_product():
     except Exception as e:
         return jsonify({
             "error": "Failed to fetch sales by product",
+            "details": str(e)
+        }), 500
+
+# ==============================
+# REPORTS — SALES BY PAYMENT METHOD
+# ==============================
+
+@main.route("/reports/sales-by-payment-method", methods=["GET"])
+@jwt_required()
+def sales_by_payment_method():
+    try:
+        results = db.session.query(
+            Payment.payment_method,
+            db.func.coalesce(db.func.sum(Payment.amount_paid), 0)
+        ).filter(
+            Payment.status == "completed"
+        ).group_by(
+            Payment.payment_method
+        ).all()
+
+        data = [
+            {
+                "payment_method": method,
+                "total_amount": float(total)
+            }
+            for method, total in results
+        ]
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to fetch sales by payment method",
             "details": str(e)
         }), 500
