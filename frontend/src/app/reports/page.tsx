@@ -25,10 +25,15 @@ export default function ReportsPage() {
       }
 
       const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        method: "GET",
+        credentials: "include",
       });
+
+      if (!res.ok) {
+        console.error("Request failed:", res.status);
+        setData([]);
+        return;
+      }
 
       const result = await res.json();
       setData(result);
@@ -93,7 +98,7 @@ export default function ReportsPage() {
               <tr className="border-b">
                 {Object.keys(data[0]).map((key) => (
                   <th key={key} className="py-2 px-4 capitalize">
-                    {key.replace("_", " ")}
+                    {key.replace(/_/g, " ")}
                   </th>
                 ))}
               </tr>
