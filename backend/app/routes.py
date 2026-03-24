@@ -604,3 +604,41 @@ def dashboard_metrics():
             "error": "Failed to fetch metrics",
             "details": str(e)
         }), 500
+    
+
+# ==============================
+# REPORTS — SALES BY PRODUCT
+# ==============================
+
+@main.route("/reports/sales-by-product", methods=["GET"])
+@jwt_required()
+def sales_by_product():
+    try:
+        results = db.session.query(
+            Product.id,
+            Product.name,
+            db.func.sum(SaleItem.qty).label("total_qty"),
+            db.func.sum(SaleItem.qty * SaleItem.price).label("total_revenue")
+        ).join(SaleItem, Product.id == SaleItem.product_id) \
+         .join(Sale, Sale.id == SaleItem.sale_id) \
+         .filter(Sale.status == "paid") \
+         .group_by(Product.id, Product.name) \
+         .all()
+
+        data = [
+            {
+                "product_id": r.id,
+                "product_name": r.name,
+                "total_qty": int(r.total_qty or 0),
+                "total_revenue": float(r.total_revenue or 0)
+            }
+            for r in results
+        ]
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to fetch sales by product",
+            "details": str(e)
+        }), 500
