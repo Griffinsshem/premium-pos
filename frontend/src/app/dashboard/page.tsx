@@ -7,29 +7,34 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
   ResponsiveContainer,
+  CartesianGrid,
 } from "recharts";
 
+type Metrics = {
+  today_sales: number;
+  weekly_sales: number;
+  transactions_today: number;
+};
+
+type ChartItem = {
+  name: string;
+  sales: number;
+};
+
 export default function DashboardPage() {
-  const [metrics, setMetrics] = useState({
-    today_sales: 0,
-    weekly_sales: 0,
-    transactions_today: 0,
-  });
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [chartData, setChartData] = useState<ChartItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  type ChartItem = {
-    name: string;
-    sales: number;
-  };
-
-  const [chartData, setChartData] = useState<ChartItem[]>([])
-
+  // 🔥 FETCH METRICS FROM BACKEND
   const fetchMetrics = async () => {
     try {
+      const token = localStorage.getItem("token");
+
       const res = await fetch("http://127.0.0.1:5000/dashboard/metrics", {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -40,8 +45,9 @@ export default function DashboardPage() {
     }
   };
 
+  // 🔥 TEMP WEEKLY DATA (we improve this Day 23)
   const generateChartData = () => {
-    const data = [
+    const data: ChartItem[] = [
       { name: "Mon", sales: 100 },
       { name: "Tue", sales: 200 },
       { name: "Wed", sales: 150 },
@@ -56,47 +62,42 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchMetrics();
     generateChartData();
+    setLoading(false);
   }, []);
+
+  if (loading) return <p className="p-8">Loading...</p>;
 
   return (
     <div className="p-8 space-y-8">
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          TrueVend Dashboard
+          TruVend Dashboard
         </h1>
         <p className="text-gray-500 mt-2">
-          Welcome back. Here’s your business overview.
+          Overview of your business performance
         </p>
       </div>
 
       {/* KPI CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white shadow-md rounded-xl p-6 border">
-          <h2 className="text-sm text-gray-500">Today Sales</h2>
-          <p className="text-3xl font-bold mt-2">
-            KES {metrics.today_sales}
-          </p>
-        </div>
-
-        <div className="bg-white shadow-md rounded-xl p-6 border">
-          <h2 className="text-sm text-gray-500">Weekly Sales</h2>
-          <p className="text-3xl font-bold mt-2">
-            KES {metrics.weekly_sales}
-          </p>
-        </div>
-
-        <div className="bg-white shadow-md rounded-xl p-6 border">
-          <h2 className="text-sm text-gray-500">Transactions Today</h2>
-          <p className="text-3xl font-bold mt-2">
-            {metrics.transactions_today}
-          </p>
-        </div>
+        <Card
+          title="Today's Sales"
+          value={`KES ${metrics?.today_sales ?? 0}`}
+        />
+        <Card
+          title="Weekly Sales"
+          value={`KES ${metrics?.weekly_sales ?? 0}`}
+        />
+        <Card
+          title="Transactions Today"
+          value={metrics?.transactions_today ?? 0}
+        />
       </div>
 
-      {/* SALES CHART */}
+      {/* SALES GRAPH */}
       <div className="bg-white shadow-md rounded-xl p-6 border">
-        <h2 className="text-lg font-semibold mb-4">Weekly Sales Trend</h2>
+        <h2 className="text-lg font-semibold mb-4">Weekly Sales</h2>
 
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
@@ -104,10 +105,20 @@ export default function DashboardPage() {
             <XAxis dataKey="name" />
             <YAxis />
             <Tooltip />
-            <Line type="monotone" dataKey="sales" strokeWidth={3} />
+            <Line type="monotone" dataKey="sales" />
           </LineChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  );
+}
+
+
+function Card({ title, value }: { title: string; value: any }) {
+  return (
+    <div className="bg-white shadow-md rounded-xl p-6 border">
+      <h2 className="text-lg font-semibold text-gray-700">{title}</h2>
+      <p className="text-3xl font-bold mt-4 text-gray-900">{value}</p>
     </div>
   );
 }
