@@ -676,3 +676,37 @@ def sales_by_payment_method():
             "error": "Failed to fetch sales by payment method",
             "details": str(e)
         }), 500
+
+
+# ==============================
+# REPORTS — LOW STOCK
+# ==============================
+
+@main.route("/reports/low-stock", methods=["GET"])
+@jwt_required()
+def low_stock_report():
+    try:
+        # Optional threshold (default = 5)
+        threshold = request.args.get("threshold", 5, type=int)
+
+        products = Product.query.filter(
+            Product.stock <= threshold,
+            Product.is_deleted == False
+        ).order_by(Product.stock.asc()).all()
+
+        data = [
+            {
+                "product_id": p.id,
+                "product_name": p.name,
+                "stock": p.stock
+            }
+            for p in products
+        ]
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to fetch low stock report",
+            "details": str(e)
+        }), 500
