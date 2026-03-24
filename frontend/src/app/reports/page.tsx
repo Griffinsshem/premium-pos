@@ -17,11 +17,11 @@ export default function ReportsPage() {
       let url = "";
 
       if (reportType === "product") {
-        url = "http://127.0.0.1:5000/reports/sales-by-product";
+        url = "/api/reports/product";
       } else if (reportType === "payment") {
-        url = "http://127.0.0.1:5000/reports/sales-by-payment-method";
+        url = "/api/reports/payment";
       } else if (reportType === "low-stock") {
-        url = `http://127.0.0.1:5000/reports/low-stock?threshold=${threshold}`;
+        url = `/api/reports/low-stock?threshold=${threshold}`;
       }
 
       const res = await fetch(url, {
