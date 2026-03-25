@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { type: string } }
+  context: { params: Promise<{ type: string }> }
 ) {
   try {
+    const { type } = await context.params;
+
     const token = req.cookies.get("token")?.value;
 
     if (!token) {
@@ -16,13 +18,15 @@ export async function GET(
 
     let backendUrl = "";
 
-    if (params.type === "product") {
+    if (type === "product") {
       backendUrl = "http://127.0.0.1:5000/reports/sales-by-product";
-    } else if (params.type === "payment") {
+    } else if (type === "payment") {
       backendUrl =
         "http://127.0.0.1:5000/reports/sales-by-payment-method";
-    } else if (params.type === "low-stock") {
-      const threshold = req.nextUrl.searchParams.get("threshold") || "5";
+    } else if (type === "low-stock") {
+      const threshold =
+        req.nextUrl.searchParams.get("threshold") || "5";
+
       backendUrl = `http://127.0.0.1:5000/reports/low-stock?threshold=${threshold}`;
     } else {
       return NextResponse.json(
