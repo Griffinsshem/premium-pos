@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     response.cookies.set("token", data.access_token, {
       httpOnly: true,
-      secure: false, // change to true in production
+      secure: false,
       sameSite: "lax",
       path: "/",
     });
