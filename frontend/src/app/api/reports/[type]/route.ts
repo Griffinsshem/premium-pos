@@ -26,7 +26,6 @@ export async function GET(
     } else if (type === "low-stock") {
       const threshold =
         req.nextUrl.searchParams.get("threshold") || "5";
-
       backendUrl = `http://127.0.0.1:5000/reports/low-stock?threshold=${threshold}`;
     } else {
       return NextResponse.json(
