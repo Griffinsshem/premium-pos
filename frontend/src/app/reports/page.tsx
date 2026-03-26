@@ -27,6 +27,9 @@ export default function ReportsPage() {
       const res = await fetch(url, {
         method: "GET",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        }
       });
 
       if (!res.ok) {
