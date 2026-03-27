@@ -35,7 +35,7 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem("token", data.acess_token);
+      localStorage.setItem("token", data.access_token);
       router.push("/dashboard");
     } catch (err) {
       setError("Something went wrong");
