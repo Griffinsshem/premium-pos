@@ -40,6 +40,8 @@ export async function GET(
       },
     });
 
+    console.log("COOKIE TOKEN:", token);
+
     const data = await backendRes.json();
 
     return NextResponse.json(data, {
