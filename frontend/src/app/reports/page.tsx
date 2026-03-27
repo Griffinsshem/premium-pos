@@ -29,7 +29,7 @@ export default function ReportsPage() {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-        }
+        },
       });
 
       if (!res.ok) {
@@ -86,6 +86,10 @@ export default function ReportsPage() {
           className="bg-black text-white px-4 py-2 rounded-lg"
         >
           Apply
+        </button>
+
+        <button className="bg-green-600 text-white px-4 py-2 rounded-lg">
+          Export CSV
         </button>
       </div>
 
