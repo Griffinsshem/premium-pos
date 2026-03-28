@@ -47,6 +47,37 @@ export default function ReportsPage() {
     }
   };
 
+  const exportCSV = () => {
+    if (!data.length) {
+      alert("No data to export");
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+
+    const csvRows = [
+      headers.join(","),
+      ...data.map((row) =>
+        headers
+          .map((field) => JSON.stringify(row[field] ?? ""))
+          .join(",")
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], {
+      type: "text/csv",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${reportType}-report.csv`;
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     fetchReport();
   }, [reportType]);
@@ -88,7 +119,10 @@ export default function ReportsPage() {
           Apply
         </button>
 
-        <button className="bg-green-600 text-white px-4 py-2 rounded-lg">
+        <button
+          onClick={exportCSV}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg"
+        >
           Export CSV
         </button>
       </div>
