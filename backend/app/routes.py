@@ -5,9 +5,30 @@ import requests
 import base64
 from datetime import datetime, timedelta
 from flask import current_app
+from functools import wraps
 from . import db
 
 main = Blueprint("main", __name__)
+
+
+# ==============================
+# ROLE-BASED ACCESS CONTROL
+# ==============================
+
+def admin_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        current_user = get_jwt_identity()
+
+        user = User.query.get(current_user["id"])
+
+        if not user or user.role != "admin":
+            return jsonify({"error": "Admin access required"}), 403
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 @main.route("/")
