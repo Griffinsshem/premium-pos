@@ -37,19 +37,21 @@ def home():
 
 
 # ==============================
-# USER ROUTES
+# USER ROUTES (ADMIN ONLY)
 # ==============================
 
 @main.route("/users", methods=["GET"])
+@admin_required
 def get_users():
     users = User.query.all()
     return jsonify([
-        {"id": u.id, "name": u.name, "email": u.email}
+        {"id": u.id, "name": u.name, "email": u.email, "role": u.role}
         for u in users
     ])
 
 
 @main.route("/users", methods=["POST"])
+@admin_required
 def create_user():
     data = request.get_json()
 
@@ -75,6 +77,7 @@ def create_user():
 
 
 @main.route("/users/<int:user_id>", methods=["PUT"])
+@admin_required
 def update_user(user_id):
     user = User.query.get(user_id)
 
@@ -101,6 +104,7 @@ def update_user(user_id):
 
 
 @main.route("/users/<int:user_id>", methods=["DELETE"])
+@admin_required
 def delete_user(user_id):
     user = User.query.get(user_id)
 
