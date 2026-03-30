@@ -12,31 +12,31 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <div className="w-64 h-screen bg-black text-white p-6 space-y-6">
-      <h2 className="text-2xl font-bold">TruVend</h2>
+    <div className="w-64 h-screen bg-white border-r p-6 space-y-6">
+      <h2 className="text-2xl font-bold text-gray-800">TruVend</h2>
 
-      <nav className="flex flex-col gap-4">
+      <nav className="flex flex-col gap-4 text-gray-700">
         {/* Common */}
-        <Link href="/dashboard" className="hover:text-gray-300">
+        <Link href="/dashboard" className="hover:text-black">
           Dashboard
         </Link>
 
-        <Link href="/products" className="hover:text-gray-300">
+        <Link href="/products" className="hover:text-black">
           Products
         </Link>
 
-        <Link href="/sales" className="hover:text-gray-300">
+        <Link href="/sales" className="hover:text-black">
           Sales
         </Link>
 
         {/* 🔒 ADMIN ONLY */}
         {role === "admin" && (
           <>
-            <Link href="/users" className="hover:text-gray-300">
+            <Link href="/users" className="hover:text-black">
               Users
             </Link>
 
-            <Link href="/reports" className="hover:text-gray-300">
+            <Link href="/reports" className="hover:text-black">
               Reports
             </Link>
           </>
