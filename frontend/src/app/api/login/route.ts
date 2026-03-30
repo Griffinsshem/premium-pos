@@ -27,9 +27,18 @@ export async function POST(request: Request) {
       user: data.user,
     });
 
-    // Cookie
+    // Token cookie
     response.cookies.set("token", data.access_token, {
       httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24,
+    });
+
+    // Role cookie 
+    response.cookies.set("role", data.user.role, {
+      httpOnly: false,
       secure: false,
       sameSite: "lax",
       path: "/",
