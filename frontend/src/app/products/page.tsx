@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Package, Search } from "lucide-react";
+import { Package, Search, Plus, X } from "lucide-react";
 
 type Product = {
   id: number;
@@ -15,6 +15,17 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  const [role, setRole] = useState<string | null>(null);
+
+  // MODAL STATE
+  const [showModal, setShowModal] = useState(false);
+
+  // FORM STATE
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("");
+  const [sku, setSku] = useState("");
 
   const fetchProducts = async () => {
     try {
@@ -39,12 +50,56 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
+    const storedRole = localStorage.getItem("role");
+    setRole(storedRole);
+
     fetchProducts();
   }, []);
 
   const handleSearch = () => {
     setLoading(true);
     fetchProducts();
+  };
+
+  // CREATE PRODUCT
+  const handleCreateProduct = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://127.0.0.1:5000/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          price: Number(price),
+          stock: Number(stock),
+          sku,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to create product");
+        return;
+      }
+
+      // Reset form
+      setName("");
+      setPrice("");
+      setStock("");
+      setSku("");
+
+      setShowModal(false);
+
+      // Refresh list
+      fetchProducts();
+    } catch (err) {
+      console.error("Create product failed", err);
+    }
   };
 
   return (
@@ -61,22 +116,35 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        {/* SEARCH */}
-        <div className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 shadow-sm">
-          <Search size={18} className="text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            className="outline-none text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <button
-            onClick={handleSearch}
-            className="text-sm px-3 py-1 bg-black text-white rounded-md hover:bg-gray-800"
-          >
-            Search
-          </button>
+        <div className="flex flex-col md:flex-row gap-3">
+          {/* SEARCH */}
+          <div className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 shadow-sm">
+            <Search size={18} className="text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              className="outline-none text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button
+              onClick={handleSearch}
+              className="text-sm px-3 py-1 bg-black text-white rounded-md hover:bg-gray-800"
+            >
+              Search
+            </button>
+          </div>
+
+          {/* ADMIN ONLY BUTTON */}
+          {role === "admin" && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+            >
+              <Plus size={18} />
+              Add Product
+            </button>
+          )}
         </div>
       </div>
 
@@ -121,6 +189,59 @@ export default function ProductsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md space-y-4 shadow-lg">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Add Product</h2>
+              <button onClick={() => setShowModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Product name"
+              className="w-full border rounded-lg px-3 py-2"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <input
+              type="number"
+              placeholder="Price"
+              className="w-full border rounded-lg px-3 py-2"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+
+            <input
+              type="number"
+              placeholder="Stock"
+              className="w-full border rounded-lg px-3 py-2"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+            />
+
+            <input
+              type="text"
+              placeholder="SKU (optional)"
+              className="w-full border rounded-lg px-3 py-2"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+            />
+
+            <button
+              onClick={handleCreateProduct}
+              className="w-full bg-black text-white py-2 rounded-lg hover:bg-gray-800"
+            >
+              Create Product
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
