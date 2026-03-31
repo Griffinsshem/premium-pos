@@ -10,6 +10,11 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import {
+  DollarSign,
+  BarChart3,
+  ShoppingCart,
+} from "lucide-react";
 
 type Metrics = {
   today_sales: number;
@@ -27,7 +32,7 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState<ChartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 FETCH METRICS FROM BACKEND
+  // FETCH METRICS
   const fetchMetrics = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -45,9 +50,9 @@ export default function DashboardPage() {
     }
   };
 
-  // 🔥 TEMP WEEKLY DATA (we improve this Day 23)
+  // TEMP DATA
   const generateChartData = () => {
-    const data: ChartItem[] = [
+    setChartData([
       { name: "Mon", sales: 100 },
       { name: "Tue", sales: 200 },
       { name: "Wed", sales: 150 },
@@ -55,8 +60,7 @@ export default function DashboardPage() {
       { name: "Fri", sales: 250 },
       { name: "Sat", sales: 400 },
       { name: "Sun", sales: 350 },
-    ];
-    setChartData(data);
+    ]);
   };
 
   useEffect(() => {
@@ -65,39 +69,48 @@ export default function DashboardPage() {
     setLoading(false);
   }, []);
 
-  if (loading) return <p className="p-8">Loading...</p>;
+  if (loading) {
+    return <p className="p-6">Loading dashboard...</p>;
+  }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-6 md:p-8 space-y-8 bg-gray-50 min-h-screen">
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          TruVend Dashboard
+        <h1 className="text-3xl font-bold text-gray-900">
+          Dashboard Overview
         </h1>
-        <p className="text-gray-500 mt-2">
-          Overview of your business performance
+        <p className="text-gray-500 mt-1">
+          Track your sales, performance, and activity
         </p>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatCard
           title="Today's Sales"
           value={`KES ${metrics?.today_sales ?? 0}`}
+          icon={<DollarSign size={20} />}
         />
-        <Card
+
+        <StatCard
           title="Weekly Sales"
           value={`KES ${metrics?.weekly_sales ?? 0}`}
+          icon={<BarChart3 size={20} />}
         />
-        <Card
-          title="Transactions Today"
+
+        <StatCard
+          title="Transactions"
           value={metrics?.transactions_today ?? 0}
+          icon={<ShoppingCart size={20} />}
         />
       </div>
 
-      {/* SALES GRAPH */}
-      <div className="bg-white shadow-md rounded-xl p-6 border">
-        <h2 className="text-lg font-semibold mb-4">Weekly Sales</h2>
+      {/* CHART */}
+      <div className="bg-white rounded-xl border shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          Weekly Sales Trend
+        </h2>
 
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
@@ -113,12 +126,26 @@ export default function DashboardPage() {
   );
 }
 
-
-function Card({ title, value }: { title: string; value: any }) {
+/* PREMIUM CARD */
+function StatCard({
+  title,
+  value,
+  icon,
+}: {
+  title: string;
+  value: any;
+  icon: React.ReactNode;
+}) {
   return (
-    <div className="bg-white shadow-md rounded-xl p-6 border">
-      <h2 className="text-lg font-semibold text-gray-700">{title}</h2>
-      <p className="text-3xl font-bold mt-4 text-gray-900">{value}</p>
+    <div className="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium text-gray-500">{title}</h2>
+        <div className="text-gray-700">{icon}</div>
+      </div>
+
+      <p className="text-2xl font-bold text-gray-900 mt-4">
+        {value}
+      </p>
     </div>
   );
 }
