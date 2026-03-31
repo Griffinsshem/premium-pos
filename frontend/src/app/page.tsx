@@ -1,97 +1,56 @@
 "use client";
 
-import { useState } from "react";
-import CashModal from "@/components/CashModal";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [token, setToken] = useState<string>("");
-  const [saleId, setSaleId] = useState<number | null>(null);
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [total, setTotal] = useState<number>(100); // test total
-
-  // 🔐 LOGIN (quick test)
-  const handleLogin = async () => {
-    const res = await fetch("http://127.0.0.1:5000/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: "admin@test.com",
-        password: "123456",
-      }),
-    });
-
-    const data = await res.json();
-    setToken(data.access_token);
-    alert("Logged in");
-  };
-
-  // 🛒 CREATE SALE
-  const handleCreateSale = async () => {
-    if (!token) {
-      alert("Login first");
-      return;
-    }
-
-    const res = await fetch("http://127.0.0.1:5000/sales", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        items: [
-          {
-            product_id: 1,
-            qty: 1,
-            price: 100,
-          },
-        ],
-        subtotal: 100,
-        tax: 0,
-        discount: 0,
-        total: 100,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Sale failed");
-      return;
-    }
-
-    setSaleId(data.sale_id);
-    setShowModal(true);
-  };
+  const router = useRouter();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-gray-100">
-      <h1 className="text-2xl font-bold">Premium POS</h1>
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* 🔝 NAVBAR */}
+      <header className="flex items-center justify-between px-6 py-4 bg-white border-b">
+        <h1 className="text-xl font-bold text-gray-800">TruVend</h1>
 
-      <button
-        onClick={handleLogin}
-        className="bg-blue-600 text-white px-4 py-2 rounded"
-      >
-        Login
-      </button>
+        <button
+          onClick={() => router.push("/login")}
+          className="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition"
+        >
+          Login
+        </button>
+      </header>
 
-      <button
-        onClick={handleCreateSale}
-        className="bg-green-600 text-white px-4 py-2 rounded"
-      >
-        Create Sale
-      </button>
+      {/* 🔥 HERO SECTION */}
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-6">
+        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 max-w-2xl">
+          Smart POS System for Modern Businesses
+        </h2>
 
-      {showModal && saleId && (
-        <CashModal
-          total={total}
-          saleId={saleId}
-          token={token}
-          onClose={() => setShowModal(false)}
-        />
-      )}
+        <p className="mt-4 text-gray-600 max-w-xl">
+          Manage sales, track inventory, and monitor performance — all in one
+          powerful platform.
+        </p>
+
+        <div className="mt-8 flex gap-4">
+          <button
+            onClick={() => router.push("/login")}
+            className="px-6 py-3 rounded-lg bg-black text-white hover:bg-gray-800 transition"
+          >
+            Get Started
+          </button>
+
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="px-6 py-3 rounded-lg border border-gray-300 hover:bg-gray-200 transition"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </main>
+
+      {/* 🔻 FOOTER */}
+      <footer className="text-center text-sm text-gray-500 py-4">
+        © {new Date().getFullYear()} TruVend POS. All rights reserved.
+      </footer>
     </div>
   );
 }
