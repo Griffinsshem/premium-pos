@@ -1,7 +1,7 @@
 "use client";
 
 import { Search, ShoppingCart } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const TAX_RATE = 0.16;
 
@@ -21,18 +21,44 @@ interface Product {
 export default function POSPage() {
   const [search, setSearch] = useState("");
 
+  // REAL PRODUCTS STATE
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
 
   // Discount state
   const [discount, setDiscount] = useState(0);
 
-  // Mock products
-  const products: Product[] = [
-    { id: 1, name: "Nike Air", price: 120 },
-    { id: 2, name: "Adidas Run", price: 95 },
-    { id: 3, name: "Jordan 4", price: 150 },
-  ];
+  // FETCH PRODUCTS FROM BACKEND
+  const fetchProducts = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://127.0.0.1:5000/products", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      setProducts(data.products || []);
+    } catch (err) {
+      console.error("Failed to fetch products", err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  //  FILTER PRODUCTS
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Add product to cart
   const addToCart = (product: Product) => {
@@ -71,13 +97,13 @@ export default function POSPage() {
     );
   };
 
-  // Clear cart 
+  // Clear cart
   const clearCart = () => {
     setCart([]);
     setDiscount(0);
   };
 
-  // Cart calculation function
+  // Cart calculation
   const calculateCartTotals = () => {
     const subtotal = cart.reduce(
       (total, item) => total + item.price * item.qty,
@@ -86,14 +112,11 @@ export default function POSPage() {
 
     const tax = subtotal * TAX_RATE;
 
-    const discountAmount = discount;
-
-    const total = subtotal + tax - discountAmount;
+    const total = subtotal + tax - discount;
 
     return {
       subtotal,
       tax,
-      discount: discountAmount,
       total,
     };
   };
@@ -102,22 +125,19 @@ export default function POSPage() {
 
   return (
     <div className="h-screen flex flex-col">
-
       {/* Header */}
       <div className="border-b px-6 py-4 flex justify-between items-center bg-white">
         <h1 className="text-2xl font-bold">TruVend Terminal</h1>
 
         <div className="text-sm text-gray-500">
-          TruVend System
+          Live POS System
         </div>
       </div>
 
       {/* POS Layout */}
-      <div className="flex-1 grid grid-cols-3 overflow-hidden">
-
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-hidden">
         {/* Product Panel */}
-        <div className="col-span-2 border-r p-6 flex flex-col">
-
+        <div className="md:col-span-2 border-r p-6 flex flex-col">
           {/* Search */}
           <div className="relative mb-6">
             <Search
@@ -136,33 +156,41 @@ export default function POSPage() {
 
           {/* Product List */}
           <div className="flex-1 overflow-y-auto border rounded-lg p-4 bg-gray-50 space-y-3">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="flex justify-between items-center bg-white border rounded-lg p-3"
-              >
-                <div>
-                  <p className="font-medium">{product.name}</p>
-                  <p className="text-sm text-gray-500">
-                    ${product.price}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => addToCart(product)}
-                  className="bg-black text-white px-3 py-1 rounded-md text-sm hover:bg-gray-800"
+            {loadingProducts ? (
+              <p className="text-sm text-gray-500">
+                Loading products...
+              </p>
+            ) : filteredProducts.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No products found
+              </p>
+            ) : (
+              filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="flex justify-between items-center bg-white border rounded-lg p-3"
                 >
-                  Add
-                </button>
-              </div>
-            ))}
-          </div>
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-sm text-gray-500">
+                      KES {product.price}
+                    </p>
+                  </div>
 
+                  <button
+                    onClick={() => addToCart(product)}
+                    className="bg-black text-white px-3 py-1 rounded-md text-sm hover:bg-gray-800"
+                  >
+                    Add
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Cart Panel */}
         <div className="p-6 flex flex-col">
-
           <div className="flex items-center gap-2 mb-4">
             <ShoppingCart size={20} />
             <h2 className="text-lg font-semibold">Cart</h2>
@@ -183,7 +211,6 @@ export default function POSPage() {
                   <span className="font-medium">{item.name}</span>
 
                   <div className="flex items-center gap-2">
-
                     <button
                       onClick={() => decreaseQty(item.id)}
                       className="px-2 py-1 border rounded hover:bg-gray-100"
@@ -201,7 +228,6 @@ export default function POSPage() {
                     >
                       +
                     </button>
-
                   </div>
                 </div>
               ))
@@ -210,15 +236,14 @@ export default function POSPage() {
 
           {/* Totals */}
           <div className="mt-6 border-t pt-4 space-y-2 text-sm">
-
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>${totals.subtotal.toFixed(2)}</span>
+              <span>KES {totals.subtotal.toFixed(2)}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Tax (16%)</span>
-              <span>${totals.tax.toFixed(2)}</span>
+              <span>KES {totals.tax.toFixed(2)}</span>
             </div>
 
             <div className="flex justify-between items-center">
@@ -234,12 +259,11 @@ export default function POSPage() {
 
             <div className="flex justify-between text-lg font-semibold pt-2 border-t">
               <span>Total</span>
-              <span>${totals.total.toFixed(2)}</span>
+              <span>KES {totals.total.toFixed(2)}</span>
             </div>
 
-            {/* Clear + Checkout */}
+            {/* Actions */}
             <div className="flex gap-2 mt-3">
-
               <button
                 onClick={clearCart}
                 className="w-1/2 border py-3 rounded-lg hover:bg-gray-100 transition"
@@ -250,13 +274,9 @@ export default function POSPage() {
               <button className="w-1/2 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition">
                 Checkout
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
     </div>
   );
