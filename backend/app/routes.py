@@ -190,7 +190,7 @@ def protected():
 # ==============================
 
 @main.route("/products", methods=["POST"])
-@jwt_required()
+@admin_required()
 def create_product():
     data = request.get_json()
 
