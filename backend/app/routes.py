@@ -734,3 +734,35 @@ def low_stock_report():
             "error": "Failed to fetch low stock report",
             "details": str(e)
         }), 500
+    
+
+# ==============================
+# PAYMENT STATUS (POLLING)
+# ==============================
+
+@main.route("/payments/status/<int:sale_id>", methods=["GET"])
+@jwt_required()
+def payment_status(sale_id):
+    try:
+        sale = Sale.query.get(sale_id)
+
+        if not sale:
+            return jsonify({"error": "Sale not found"}), 404
+
+        payment = Payment.query.filter_by(sale_id=sale.id).order_by(Payment.id.desc()).first()
+
+        if not payment:
+            return jsonify({
+                "status": "pending"
+            }), 200
+
+        return jsonify({
+            "status": payment.status,  # pending | completed
+            "method": payment.payment_method
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to fetch payment status",
+            "details": str(e)
+        }), 500
