@@ -3,6 +3,7 @@
 import { Search, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
 import CashModal from "@/components/CashModal";
+import MpesaModal from "@/components/MpesaModal";
 
 const TAX_RATE = 0.16;
 
@@ -32,6 +33,8 @@ export default function POSPage() {
   const [showModal, setShowModal] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
 
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "mpesa" | null>(null);
+
   // FETCH PRODUCTS
   const fetchProducts = async () => {
     try {
@@ -60,7 +63,7 @@ export default function POSPage() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ADD TO CART
+  // CART LOGIC
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -77,7 +80,6 @@ export default function POSPage() {
     });
   };
 
-  // INCREASE / DECREASE
   const increaseQty = (id: number) => {
     setCart((prev) =>
       prev.map((item) =>
@@ -116,7 +118,7 @@ export default function POSPage() {
 
   const totals = calculateCartTotals();
 
-  // CHECKOUT
+
   const handleCheckout = async () => {
     if (checkingOut) return;
 
@@ -130,6 +132,11 @@ export default function POSPage() {
 
       if (cart.length === 0) {
         alert("Cart is empty");
+        return;
+      }
+
+      if (!paymentMethod) {
+        alert("Select payment method");
         return;
       }
 
@@ -276,6 +283,23 @@ export default function POSPage() {
               <span>KES {totals.total.toFixed(2)}</span>
             </div>
 
+            {/* PAYMENT METHOD */}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => setPaymentMethod("cash")}
+                className={`flex-1 py-2 rounded-lg border ${paymentMethod === "cash" ? "bg-black text-white" : ""}`}
+              >
+                Cash
+              </button>
+
+              <button
+                onClick={() => setPaymentMethod("mpesa")}
+                className={`flex-1 py-2 rounded-lg border ${paymentMethod === "mpesa" ? "bg-green-600 text-white" : ""}`}
+              >
+                M-Pesa
+              </button>
+            </div>
+
             {/* ACTIONS */}
             <div className="flex gap-2 mt-3">
               <button
@@ -297,8 +321,8 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* MODAL */}
-      {showModal && saleId && (
+      {/* MODALS */}
+      {showModal && saleId && paymentMethod === "cash" && (
         <CashModal
           total={totals.total}
           saleId={saleId}
@@ -307,7 +331,21 @@ export default function POSPage() {
             setShowModal(false);
             setSaleId(null);
             clearCart();
-            fetchProducts(); // refresh stock
+            fetchProducts();
+          }}
+        />
+      )}
+
+      {showModal && saleId && paymentMethod === "mpesa" && (
+        <MpesaModal
+          total={totals.total}
+          saleId={saleId}
+          token={localStorage.getItem("token") || ""}
+          onClose={() => {
+            setShowModal(false);
+            setSaleId(null);
+            clearCart();
+            fetchProducts();
           }}
         />
       )}
