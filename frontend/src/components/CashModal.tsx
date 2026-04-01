@@ -16,21 +16,18 @@ export default function CashModal({
   token,
   onClose,
 }: CashModalProps) {
-  const [amount, setAmount] = useState<string>("");
-  const [balance, setBalance] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [amount, setAmount] = useState("");
+  const [balance, setBalance] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
+  const [success, setSuccess] = useState(false);
 
   const handleChange = (value: string) => {
     setAmount(value);
-
     const paid = parseFloat(value) || 0;
     setBalance(paid - total);
 
-    if (paid >= total) {
-      setError(null);
-    }
+    if (paid >= total) setError(null);
   };
 
   const handlePayment = async () => {
@@ -73,7 +70,6 @@ export default function CashModal({
 
       setSuccess(true);
 
-      // Auto close after success
       setTimeout(() => {
         onClose();
       }, 1500);
@@ -88,16 +84,14 @@ export default function CashModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-xl space-y-5 animate-in fade-in zoom-in">
+      <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-xl space-y-5">
 
-        {/* HEADER */}
-        <h2 className="text-xl font-bold text-center flex items-center justify-center gap-2">
+        <h2 className="text-xl font-bold text-center">
           Cash Payment
         </h2>
 
-        {/* SUCCESS STATE */}
         {success ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-6">
+          <div className="flex flex-col items-center gap-3 py-6">
             <CheckCircle className="text-green-600" size={40} />
             <p className="text-green-600 font-semibold">
               Payment Successful
@@ -105,7 +99,6 @@ export default function CashModal({
           </div>
         ) : (
           <>
-            {/* TOTAL */}
             <div className="text-center">
               <p className="text-gray-500 text-sm">Total</p>
               <p className="text-2xl font-bold">
@@ -113,27 +106,21 @@ export default function CashModal({
               </p>
             </div>
 
-            {/* INPUT */}
             <input
               type="number"
               placeholder="Enter cash amount"
               value={amount}
               onChange={(e) => handleChange(e.target.value)}
-              className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500"
             />
 
-            {/* BALANCE */}
             <div className="text-center">
               <p className="text-gray-500 text-sm">Balance</p>
-              <p
-                className={`text-lg font-semibold ${balance < 0 ? "text-red-500" : "text-green-600"
-                  }`}
-              >
+              <p className={`text-lg font-semibold ${balance < 0 ? "text-red-500" : "text-green-600"}`}>
                 KES {balance.toFixed(2)}
               </p>
             </div>
 
-            {/* ERROR */}
             {error && (
               <div className="flex items-center gap-2 text-red-500 text-sm">
                 <XCircle size={16} />
@@ -141,7 +128,6 @@ export default function CashModal({
               </div>
             )}
 
-            {/* ACTIONS */}
             <div className="flex gap-3">
               <button
                 onClick={handlePayment}
