@@ -2,6 +2,7 @@
 
 import { Search, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
+import CashModal from "@/components/CashModal";
 
 const TAX_RATE = 0.16;
 
@@ -21,17 +22,14 @@ interface Product {
 export default function POSPage() {
   const [search, setSearch] = useState("");
 
-  // REAL PRODUCTS STATE
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-
-  // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
-
-  // Discount state
   const [discount, setDiscount] = useState(0);
+  const [saleId, setSaleId] = useState<number | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
-  // FETCH PRODUCTS FROM BACKEND
+
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -55,12 +53,12 @@ export default function POSPage() {
     fetchProducts();
   }, []);
 
-  //  FILTER PRODUCTS
+
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Add product to cart
+  // ADD TO CART
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -77,7 +75,7 @@ export default function POSPage() {
     });
   };
 
-  // Increase quantity
+  // INCREASE
   const increaseQty = (id: number) => {
     setCart((prev) =>
       prev.map((item) =>
@@ -86,7 +84,7 @@ export default function POSPage() {
     );
   };
 
-  // Decrease quantity
+  // DECREASE
   const decreaseQty = (id: number) => {
     setCart((prev) =>
       prev
@@ -97,13 +95,13 @@ export default function POSPage() {
     );
   };
 
-  // Clear cart
+  // CLEAR
   const clearCart = () => {
     setCart([]);
     setDiscount(0);
   };
 
-  // Cart calculation
+  // TOTALS
   const calculateCartTotals = () => {
     const subtotal = cart.reduce(
       (total, item) => total + item.price * item.qty,
@@ -114,37 +112,82 @@ export default function POSPage() {
 
     const total = subtotal + tax - discount;
 
-    return {
-      subtotal,
-      tax,
-      total,
-    };
+    return { subtotal, tax, total };
   };
 
   const totals = calculateCartTotals();
 
+  // CHECKOUT
+  const handleCheckout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Please login");
+        return;
+      }
+
+      if (cart.length === 0) {
+        alert("Cart is empty");
+        return;
+      }
+
+      const payload = {
+        items: cart.map((item) => ({
+          product_id: item.id,
+          qty: item.qty,
+          price: item.price,
+        })),
+        subtotal: totals.subtotal,
+        tax: totals.tax,
+        discount: discount,
+        total: totals.total,
+      };
+
+      const res = await fetch("http://127.0.0.1:5000/sales", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Checkout failed");
+        return;
+      }
+
+      // SUCCESS
+      setSaleId(data.sale_id);
+      setShowModal(true);
+
+    } catch (err) {
+      console.error(err);
+      alert("Checkout error");
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col">
-      {/* Header */}
+      {/* HEADER */}
       <div className="border-b px-6 py-4 flex justify-between items-center bg-white">
         <h1 className="text-2xl font-bold">TruVend Terminal</h1>
-
-        <div className="text-sm text-gray-500">
-          Live POS System
-        </div>
+        <div className="text-sm text-gray-500">Live POS System</div>
       </div>
 
-      {/* POS Layout */}
+      {/* LAYOUT */}
       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-hidden">
-        {/* Product Panel */}
+
+        {/* PRODUCTS */}
         <div className="md:col-span-2 border-r p-6 flex flex-col">
-          {/* Search */}
           <div className="relative mb-6">
             <Search
               size={18}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             />
-
             <input
               type="text"
               placeholder="Search products..."
@@ -154,16 +197,11 @@ export default function POSPage() {
             />
           </div>
 
-          {/* Product List */}
           <div className="flex-1 overflow-y-auto border rounded-lg p-4 bg-gray-50 space-y-3">
             {loadingProducts ? (
-              <p className="text-sm text-gray-500">
-                Loading products...
-              </p>
+              <p className="text-sm text-gray-500">Loading products...</p>
             ) : filteredProducts.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No products found
-              </p>
+              <p className="text-sm text-gray-500">No products found</p>
             ) : (
               filteredProducts.map((product) => (
                 <div
@@ -189,19 +227,16 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* Cart Panel */}
+        {/* CART */}
         <div className="p-6 flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <ShoppingCart size={20} />
             <h2 className="text-lg font-semibold">Cart</h2>
           </div>
 
-          {/* Cart Items */}
           <div className="flex-1 border rounded-lg p-4 bg-gray-50 space-y-3">
             {cart.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Cart is empty
-              </p>
+              <p className="text-sm text-gray-500">Cart is empty</p>
             ) : (
               cart.map((item) => (
                 <div
@@ -234,7 +269,7 @@ export default function POSPage() {
             )}
           </div>
 
-          {/* Totals */}
+          {/* TOTALS */}
           <div className="mt-6 border-t pt-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <span>Subtotal</span>
@@ -248,7 +283,6 @@ export default function POSPage() {
 
             <div className="flex justify-between items-center">
               <span>Discount</span>
-
               <input
                 type="number"
                 value={discount}
@@ -262,7 +296,7 @@ export default function POSPage() {
               <span>KES {totals.total.toFixed(2)}</span>
             </div>
 
-            {/* Actions */}
+            {/* ACTIONS */}
             <div className="flex gap-2 mt-3">
               <button
                 onClick={clearCart}
@@ -271,13 +305,29 @@ export default function POSPage() {
                 Clear
               </button>
 
-              <button className="w-1/2 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition">
+              <button
+                onClick={handleCheckout}
+                className="w-1/2 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition"
+              >
                 Checkout
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* PAYMENT MODAL */}
+      {showModal && saleId && (
+        <CashModal
+          total={totals.total}
+          saleId={saleId}
+          token={localStorage.getItem("token") || ""}
+          onClose={() => {
+            setShowModal(false);
+            clearCart();
+          }}
+        />
+      )}
     </div>
   );
 }
