@@ -21,13 +21,40 @@ export default function MpesaModal({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Normalize phone → 2547XXXXXXXX
+  const normalizePhone = (input: string) => {
+    let p = input.replace(/\s+/g, "");
+
+    if (p.startsWith("0")) {
+      return "254" + p.slice(1);
+    }
+
+    if (p.startsWith("+254")) {
+      return p.replace("+", "");
+    }
+
+    return p;
+  };
+
+  const isValidPhone = (input: string) => {
+    const normalized = normalizePhone(input);
+    return /^2547\d{8}$/.test(normalized);
+  };
+
   const handleMpesa = async () => {
     setError(null);
 
-    if (!phone || phone.length < 10) {
-      setError("Enter valid phone number");
+    if (!phone) {
+      setError("Phone number is required");
       return;
     }
+
+    if (!isValidPhone(phone)) {
+      setError("Enter valid Safaricom number (07XXXXXXXX)");
+      return;
+    }
+
+    const normalizedPhone = normalizePhone(phone);
 
     setLoading(true);
 
@@ -40,7 +67,7 @@ export default function MpesaModal({
         },
         body: JSON.stringify({
           sale_id: saleId,
-          phone,
+          phone: normalizedPhone,
         }),
       });
 
@@ -53,10 +80,10 @@ export default function MpesaModal({
 
       setSuccess(true);
 
-      // Close after success (STK sent)
+      // Auto close after showing success
       setTimeout(() => {
         onClose();
-      }, 2000);
+      }, 2500);
 
     } catch (err) {
       console.error(err);
@@ -68,8 +95,9 @@ export default function MpesaModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-xl space-y-5">
+      <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-xl space-y-5 animate-in fade-in zoom-in">
 
+        {/* HEADER */}
         <h2 className="text-xl font-bold text-center flex items-center justify-center gap-2">
           <Smartphone size={20} />
           M-Pesa Payment
@@ -87,7 +115,7 @@ export default function MpesaModal({
           </div>
         ) : (
           <>
-            {/* TOTAL */}
+            {/* AMOUNT */}
             <div className="text-center">
               <p className="text-gray-500 text-sm">Amount</p>
               <p className="text-2xl font-bold">
@@ -95,14 +123,19 @@ export default function MpesaModal({
               </p>
             </div>
 
-            {/* PHONE INPUT */}
-            <input
-              type="tel"
-              placeholder="07XXXXXXXX"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500"
-            />
+            {/* PHONE */}
+            <div className="space-y-1">
+              <input
+                type="tel"
+                placeholder="07XXXXXXXX"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-400">
+                Enter Safaricom number
+              </p>
+            </div>
 
             {/* ERROR */}
             {error && (
@@ -117,10 +150,10 @@ export default function MpesaModal({
               <button
                 onClick={handleMpesa}
                 disabled={loading}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg flex items-center justify-center gap-2"
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2 rounded-lg flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
-                {loading ? "Sending..." : "Send STK"}
+                {loading ? "Sending STK..." : "Send STK"}
               </button>
 
               <button
