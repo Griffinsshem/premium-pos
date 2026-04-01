@@ -24,12 +24,15 @@ export default function POSPage() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discount, setDiscount] = useState(0);
+
   const [saleId, setSaleId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
-
+  // FETCH PRODUCTS
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -53,7 +56,6 @@ export default function POSPage() {
     fetchProducts();
   }, []);
 
-
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -75,7 +77,7 @@ export default function POSPage() {
     });
   };
 
-  // INCREASE
+  // INCREASE / DECREASE
   const increaseQty = (id: number) => {
     setCart((prev) =>
       prev.map((item) =>
@@ -84,7 +86,6 @@ export default function POSPage() {
     );
   };
 
-  // DECREASE
   const decreaseQty = (id: number) => {
     setCart((prev) =>
       prev
@@ -95,7 +96,6 @@ export default function POSPage() {
     );
   };
 
-  // CLEAR
   const clearCart = () => {
     setCart([]);
     setDiscount(0);
@@ -109,7 +109,6 @@ export default function POSPage() {
     );
 
     const tax = subtotal * TAX_RATE;
-
     const total = subtotal + tax - discount;
 
     return { subtotal, tax, total };
@@ -119,6 +118,8 @@ export default function POSPage() {
 
   // CHECKOUT
   const handleCheckout = async () => {
+    if (checkingOut) return;
+
     try {
       const token = localStorage.getItem("token");
 
@@ -131,6 +132,8 @@ export default function POSPage() {
         alert("Cart is empty");
         return;
       }
+
+      setCheckingOut(true);
 
       const payload = {
         items: cart.map((item) => ({
@@ -160,13 +163,14 @@ export default function POSPage() {
         return;
       }
 
-      // SUCCESS
       setSaleId(data.sale_id);
       setShowModal(true);
 
     } catch (err) {
       console.error(err);
       alert("Checkout error");
+    } finally {
+      setCheckingOut(false);
     }
   };
 
@@ -184,10 +188,8 @@ export default function POSPage() {
         {/* PRODUCTS */}
         <div className="md:col-span-2 border-r p-6 flex flex-col">
           <div className="relative mb-6">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+
             <input
               type="text"
               placeholder="Search products..."
@@ -204,15 +206,10 @@ export default function POSPage() {
               <p className="text-sm text-gray-500">No products found</p>
             ) : (
               filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex justify-between items-center bg-white border rounded-lg p-3"
-                >
+                <div key={product.id} className="flex justify-between items-center bg-white border rounded-lg p-3">
                   <div>
                     <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-gray-500">
-                      KES {product.price}
-                    </p>
+                    <p className="text-sm text-gray-500">KES {product.price}</p>
                   </div>
 
                   <button
@@ -239,30 +236,13 @@ export default function POSPage() {
               <p className="text-sm text-gray-500">Cart is empty</p>
             ) : (
               cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-center bg-white border rounded-md px-3 py-2"
-                >
+                <div key={item.id} className="flex justify-between items-center bg-white border rounded-md px-3 py-2">
                   <span className="font-medium">{item.name}</span>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => decreaseQty(item.id)}
-                      className="px-2 py-1 border rounded hover:bg-gray-100"
-                    >
-                      -
-                    </button>
-
-                    <span className="w-6 text-center">
-                      {item.qty}
-                    </span>
-
-                    <button
-                      onClick={() => increaseQty(item.id)}
-                      className="px-2 py-1 border rounded hover:bg-gray-100"
-                    >
-                      +
-                    </button>
+                    <button onClick={() => decreaseQty(item.id)} className="px-2 py-1 border rounded hover:bg-gray-100">-</button>
+                    <span className="w-6 text-center">{item.qty}</span>
+                    <button onClick={() => increaseQty(item.id)} className="px-2 py-1 border rounded hover:bg-gray-100">+</button>
                   </div>
                 </div>
               ))
@@ -300,23 +280,24 @@ export default function POSPage() {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={clearCart}
-                className="w-1/2 border py-3 rounded-lg hover:bg-gray-100 transition"
+                className="w-1/2 border py-3 rounded-lg hover:bg-gray-100"
               >
                 Clear
               </button>
 
               <button
                 onClick={handleCheckout}
-                className="w-1/2 bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition"
+                disabled={checkingOut}
+                className="w-1/2 bg-black text-white py-3 rounded-lg hover:bg-gray-800 disabled:opacity-50"
               >
-                Checkout
+                {checkingOut ? "Processing..." : "Checkout"}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* PAYMENT MODAL */}
+      {/* MODAL */}
       {showModal && saleId && (
         <CashModal
           total={totals.total}
@@ -324,7 +305,9 @@ export default function POSPage() {
           token={localStorage.getItem("token") || ""}
           onClose={() => {
             setShowModal(false);
+            setSaleId(null);
             clearCart();
+            fetchProducts(); // refresh stock
           }}
         />
       )}
