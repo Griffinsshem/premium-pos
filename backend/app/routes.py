@@ -766,3 +766,68 @@ def payment_status(sale_id):
             "error": "Failed to fetch payment status",
             "details": str(e)
         }), 500
+
+
+# ==============================
+# M-PESA CALLBACK
+# ==============================
+
+@main.route("/mpesa/callback", methods=["POST"])
+def mpesa_callback():
+    try:
+        data = request.get_json()
+
+        print("🔔 M-Pesa Callback:", data)
+
+        body = data.get("Body", {}).get("stkCallback", {})
+
+        result_code = body.get("ResultCode")
+        result_desc = body.get("ResultDesc")
+        checkout_request_id = body.get("CheckoutRequestID")
+
+        # If payment failed
+        if result_code != 0:
+            return jsonify({"message": "Payment failed"}), 200
+
+        metadata = body.get("CallbackMetadata", {}).get("Item", [])
+
+        # Extract values
+        amount = None
+        mpesa_code = None
+        phone = None
+
+        for item in metadata:
+            if item["Name"] == "Amount":
+                amount = item["Value"]
+            elif item["Name"] == "MpesaReceiptNumber":
+                mpesa_code = item["Value"]
+            elif item["Name"] == "PhoneNumber":
+                phone = str(item["Value"])
+
+        # Find pending payment using phone number
+        payment = Payment.query.filter_by(
+            phone_number=phone,
+            status="pending"
+        ).order_by(Payment.id.desc()).first()
+
+        if not payment:
+            return jsonify({"message": "Payment not found"}), 200
+
+        # Update payment
+        payment.amount_paid = amount
+        payment.balance = 0
+        payment.status = "completed"
+        payment.mpesa_receipt = mpesa_code
+
+        # Mark sale as paid
+        sale = Sale.query.get(payment.sale_id)
+        if sale:
+            sale.status = "paid"
+
+        db.session.commit()
+
+        return jsonify({"message": "Callback processed"}), 200
+
+    except Exception as e:
+        print("❌ Callback error:", str(e))
+        return jsonify({"error": "Callback failed"}), 200
