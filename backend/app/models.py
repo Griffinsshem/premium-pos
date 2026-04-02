@@ -152,6 +152,10 @@ class Payment(db.Model):
         default="cash"
     )
 
+    phone_number = db.Column(db.String(20))
+    mpesa_receipt = db.Column(db.String(50))
+    checkout_request_id = db.Column(db.String(100))
+
     status = db.Column(
         db.Enum("pending", "completed"),
         default="pending"
