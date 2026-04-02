@@ -772,62 +772,112 @@ def payment_status(sale_id):
 # M-PESA CALLBACK
 # ==============================
 
+@main.route("/mpesa/stk", methods=["POST"])
+@jwt_required()
+def mpesa_stk():
+    try:
+        data = request.get_json()
+
+        sale_id = data.get("sale_id")
+        phone = data.get("phone")
+
+        if not sale_id or not phone:
+            return jsonify({"error": "sale_id and phone required"}), 400
+
+        if phone.startswith("0"):
+            phone = "254" + phone[1:]
+
+        sale = Sale.query.get(sale_id)
+
+        if not sale:
+            return jsonify({"error": "Sale not found"}), 404
+
+        if sale.status == "paid":
+            return jsonify({"error": "Already paid"}), 400
+
+        # Create pending payment
+        payment = Payment(
+            sale_id=sale.id,
+            amount_paid=0,
+            balance=sale.total,
+            payment_method="mpesa",
+            status="pending",
+            phone_number=phone
+        )
+
+        db.session.add(payment)
+        db.session.commit()
+
+        # STK Push
+        response = stk_push(phone, sale.total)
+
+        # Extract IDs from Safaricom response
+        checkout_id = response.get("CheckoutRequestID")
+
+        if checkout_id:
+            payment.checkout_request_id = checkout_id
+            db.session.commit()
+
+        return jsonify({
+            "message": "STK sent",
+            "checkout_request_id": checkout_id
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "STK failed",
+            "details": str(e)
+        }), 400
+    
+
 @main.route("/mpesa/callback", methods=["POST"])
 def mpesa_callback():
     try:
         data = request.get_json()
 
-        print("🔔 M-Pesa Callback:", data)
+        stk_callback = data["Body"]["stkCallback"]
 
-        body = data.get("Body", {}).get("stkCallback", {})
+        checkout_id = stk_callback["CheckoutRequestID"]
+        result_code = stk_callback["ResultCode"]
 
-        result_code = body.get("ResultCode")
-        result_desc = body.get("ResultDesc")
-        checkout_request_id = body.get("CheckoutRequestID")
-
-        # If payment failed
-        if result_code != 0:
-            return jsonify({"message": "Payment failed"}), 200
-
-        metadata = body.get("CallbackMetadata", {}).get("Item", [])
-
-        # Extract values
-        amount = None
-        mpesa_code = None
-        phone = None
-
-        for item in metadata:
-            if item["Name"] == "Amount":
-                amount = item["Value"]
-            elif item["Name"] == "MpesaReceiptNumber":
-                mpesa_code = item["Value"]
-            elif item["Name"] == "PhoneNumber":
-                phone = str(item["Value"])
-
-        # Find pending payment using phone number
         payment = Payment.query.filter_by(
-            phone_number=phone,
-            status="pending"
-        ).order_by(Payment.id.desc()).first()
+            checkout_request_id=checkout_id
+        ).first()
 
         if not payment:
-            return jsonify({"message": "Payment not found"}), 200
+            return jsonify({"message": "Payment not found"}), 404
 
-        # Update payment
-        payment.amount_paid = amount
-        payment.balance = 0
-        payment.status = "completed"
-        payment.mpesa_receipt = mpesa_code
+        # SUCCESS
+        if result_code == 0:
+            metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
 
-        # Mark sale as paid
-        sale = Sale.query.get(payment.sale_id)
-        if sale:
+            mpesa_receipt = None
+            amount = 0
+
+            for item in metadata:
+                if item["Name"] == "MpesaReceiptNumber":
+                    mpesa_receipt = item["Value"]
+                if item["Name"] == "Amount":
+                    amount = item["Value"]
+
+            payment.status = "completed"
+            payment.amount_paid = amount
+            payment.balance = 0
+            payment.mpesa_receipt = mpesa_receipt
+
+            sale = Sale.query.get(payment.sale_id)
             sale.status = "paid"
+
+        else:
+            # FAILED / CANCELLED
+            payment.status = "failed"
 
         db.session.commit()
 
         return jsonify({"message": "Callback processed"}), 200
 
     except Exception as e:
-        print("❌ Callback error:", str(e))
-        return jsonify({"error": "Callback failed"}), 200
+        return jsonify({
+            "error": "Callback error",
+            "details": str(e)
+        }), 400
