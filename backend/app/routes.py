@@ -714,12 +714,18 @@ def mpesa_stk():
     try:
         data = request.get_json()
 
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
+
         sale_id = data.get("sale_id")
         phone = data.get("phone")
 
         if not sale_id or not phone:
-            return jsonify({"error": "sale_id and phone required"}), 400
+            return jsonify({
+                "error": "sale_id and phone required"
+            }), 400
 
+        # Normalize phone number (07XXXXXXXX → 2547XXXXXXXX)
         if phone.startswith("0"):
             phone = "254" + phone[1:]
 
@@ -729,7 +735,7 @@ def mpesa_stk():
             return jsonify({"error": "Sale not found"}), 404
 
         if sale.status == "paid":
-            return jsonify({"error": "Already paid"}), 400
+            return jsonify({"error": "Sale already paid"}), 400
 
         # Create pending payment
         payment = Payment(
@@ -744,24 +750,36 @@ def mpesa_stk():
         db.session.add(payment)
         db.session.commit()
 
-        # STK Push
+        # Trigger STK Push
         response = stk_push(phone, sale.total)
 
-        # Extract IDs from Safaricom response
-        checkout_id = response.get("CheckoutRequestID")
+        # Debug log (very useful)
+        print("M-PESA RESPONSE:", response)
 
+        checkout_id = response.get("CheckoutRequestID")
+        merchant_request_id = response.get("MerchantRequestID")
+
+        # Save checkout_request_id (IMPORTANT)
         if checkout_id:
             payment.checkout_request_id = checkout_id
             db.session.commit()
+        else:
+            return jsonify({
+                "error": "Failed to initiate STK",
+                "mpesa_response": response
+            }), 400
 
         return jsonify({
-            "message": "STK sent",
-            "checkout_request_id": checkout_id
+            "message": "STK push sent",
+            "sale_id": sale.id,
+            "checkout_request_id": checkout_id,
+            "merchant_request_id": merchant_request_id,
+            "status": "pending"
         }), 200
 
     except Exception as e:
         return jsonify({
-            "error": "STK failed",
+            "error": "STK push failed",
             "details": str(e)
         }), 400
     
