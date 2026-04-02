@@ -153,8 +153,8 @@ class Payment(db.Model):
     )
 
     phone_number = db.Column(db.String(20))
-    mpesa_receipt = db.Column(db.String(50))
-    checkout_request_id = db.Column(db.String(100))
+    mpesa_receipt = db.Column(db.String(255))
+    checkout_request_id = db.Column(db.String(255))
 
     status = db.Column(
         db.Enum("pending", "completed"),
