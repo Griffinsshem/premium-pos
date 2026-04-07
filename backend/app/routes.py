@@ -712,7 +712,8 @@ def payment_status(sale_id):
 @jwt_required()
 def mpesa_stk():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
+        print("REQUEST DATA:", data)
 
         if not data:
             return jsonify({"error": "Request body required"}), 400
@@ -722,10 +723,10 @@ def mpesa_stk():
 
         if not sale_id or not phone:
             return jsonify({
-                "error": "sale_id and phone required"
+                "error": "sale_id and phone required",
+                "received": data
             }), 400
 
-        # Normalize phone number (07XXXXXXXX → 2547XXXXXXXX)
         if phone.startswith("0"):
             phone = "254" + phone[1:]
 
@@ -750,34 +751,30 @@ def mpesa_stk():
         db.session.add(payment)
         db.session.commit()
 
-        # Trigger STK Push
+        # STK PUSH
         response = stk_push(phone, sale.total)
 
-        # Debug log (very useful)
         print("M-PESA RESPONSE:", response)
 
         checkout_id = response.get("CheckoutRequestID")
-        merchant_request_id = response.get("MerchantRequestID")
 
-        # Save checkout_request_id (IMPORTANT)
-        if checkout_id:
-            payment.checkout_request_id = checkout_id
-            db.session.commit()
-        else:
+        if not checkout_id:
             return jsonify({
                 "error": "Failed to initiate STK",
                 "mpesa_response": response
             }), 400
 
+        payment.checkout_request_id = checkout_id
+        db.session.commit()
+
         return jsonify({
             "message": "STK push sent",
-            "sale_id": sale.id,
             "checkout_request_id": checkout_id,
-            "merchant_request_id": merchant_request_id,
             "status": "pending"
         }), 200
 
     except Exception as e:
+        print("ERROR:", str(e))
         return jsonify({
             "error": "STK push failed",
             "details": str(e)
