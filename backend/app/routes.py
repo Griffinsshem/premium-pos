@@ -455,15 +455,22 @@ def get_mpesa_access_token():
     consumer_secret = current_app.config["MPESA_CONSUMER_SECRET"]
     base_url = current_app.config["MPESA_BASE_URL"]
 
+    print("=== M-PESA DEBUG ===")
+    print("CONSUMER KEY:", consumer_key)
+    print("CONSUMER SECRET:", consumer_secret)
+    print("BASE URL:", base_url)
+
     url = f"{base_url}/oauth/v1/generate?grant_type=client_credentials"
 
     response = requests.get(url, auth=(consumer_key, consumer_secret))
+
+    print("STATUS CODE:", response.status_code)
+    print("RESPONSE TEXT:", response.text)
 
     if response.status_code != 200:
         raise Exception("Failed to get access token")
 
     return response.json().get("access_token")
-
 
 def generate_password():
     shortcode = current_app.config["MPESA_SHORTCODE"]
