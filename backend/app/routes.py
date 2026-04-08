@@ -817,23 +817,32 @@ def mpesa_stk():
 
 @main.route("/mpesa/callback", methods=["POST"])
 def mpesa_callback():
-    print("CALLBACK RECEIVED:", data)
     try:
         data = request.get_json()
+        print("CALLBACK RECEIVED:", data)
 
-        stk_callback = data["Body"]["stkCallback"]
+        if not data:
+            return jsonify({"error": "No data received"}), 400
 
-        checkout_id = stk_callback["CheckoutRequestID"]
-        result_code = stk_callback["ResultCode"]
+        stk_callback = data.get("Body", {}).get("stkCallback", {})
+
+        checkout_id = stk_callback.get("CheckoutRequestID")
+        result_code = stk_callback.get("ResultCode")
+
+        print("Checkout ID:", checkout_id)
+        print("Result Code:", result_code)
 
         payment = Payment.query.filter_by(
             checkout_request_id=checkout_id
         ).first()
 
         if not payment:
+            print(" Payment not found")
             return jsonify({"message": "Payment not found"}), 404
 
+        # =====================
         # SUCCESS
+        # =====================
         if result_code == 0:
             metadata = stk_callback.get("CallbackMetadata", {}).get("Item", [])
 
@@ -842,9 +851,9 @@ def mpesa_callback():
 
             for item in metadata:
                 if item["Name"] == "MpesaReceiptNumber":
-                    mpesa_receipt = item["Value"]
+                    mpesa_receipt = item.get("Value")
                 if item["Name"] == "Amount":
-                    amount = item["Value"]
+                    amount = item.get("Value")
 
             payment.status = "completed"
             payment.amount_paid = amount
@@ -852,17 +861,21 @@ def mpesa_callback():
             payment.mpesa_receipt = mpesa_receipt
 
             sale = Sale.query.get(payment.sale_id)
-            sale.status = "paid"
+            if sale:
+                sale.status = "paid"
+
+            print(" PAYMENT COMPLETED")
 
         else:
-            # FAILED / CANCELLED
             payment.status = "failed"
+            print(" PAYMENT FAILED")
 
         db.session.commit()
 
         return jsonify({"message": "Callback processed"}), 200
 
     except Exception as e:
+        print(" CALLBACK ERROR:", str(e))
         return jsonify({
             "error": "Callback error",
             "details": str(e)
