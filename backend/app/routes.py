@@ -189,25 +189,52 @@ def protected():
 # PRODUCT ROUTES
 # ==============================
 
+import uuid
+
 @main.route("/products", methods=["POST"])
 @admin_required
 def create_product():
-    data = request.get_json()
+    try:
+        data = request.get_json()
 
-    product = Product(
-        name=data["name"].strip(),
-        description=data.get("description"),
-        sku=data.get("sku"),
-        barcode=data.get("barcode"),
-        price=float(data["price"]),
-        stock=int(data.get("stock", 0))
-    )
+        name = data.get("name", "").strip()
+        description = data.get("description")
+        sku = data.get("sku")
+        barcode = data.get("barcode")
+        price = data.get("price")
+        stock = data.get("stock", 0)
 
-    db.session.add(product)
-    db.session.commit()
+        
+        if not name or price is None:
+            return jsonify({"error": "Name and price are required"}), 400
 
-    return jsonify({"message": "Product created successfully"}), 201
+    
+        if not sku or sku.strip() == "":
+            sku = "SKU-" + str(uuid.uuid4())[:8]
 
+        product = Product(
+            name=name,
+            description=description,
+            sku=sku,
+            barcode=barcode,
+            price=float(price),
+            stock=int(stock)
+        )
+
+        db.session.add(product)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Product created successfully",
+            "sku": sku
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "error": "Failed to create product",
+            "details": str(e)
+        }), 500
 
 @main.route("/products", methods=["GET"])
 def get_products():
@@ -790,6 +817,7 @@ def mpesa_stk():
 
 @main.route("/mpesa/callback", methods=["POST"])
 def mpesa_callback():
+    print("CALLBACK RECEIVED:", data)
     try:
         data = request.get_json()
 
