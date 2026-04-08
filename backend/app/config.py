@@ -28,7 +28,7 @@ class Config:
 
     MPESA_CALLBACK_URL = os.getenv(
         "MPESA_CALLBACK_URL",
-        "https://francisco-gritless-mirian.ngrok-free.dev/mpesa/callback"
+        " https://francisco-gritless-mirian.ngrok-free.dev/mpesa/callback"
     )
 
     MPESA_BASE_URL = (
