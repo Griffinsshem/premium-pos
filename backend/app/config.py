@@ -26,10 +26,7 @@ class Config:
     MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE", "174379") 
     MPESA_PASSKEY = os.getenv("MPESA_PASSKEY", "")
 
-    MPESA_CALLBACK_URL = os.getenv(
-        "MPESA_CALLBACK_URL",
-        " https://francisco-gritless-mirian.ngrok-free.dev/mpesa/callback"
-    )
+    MPESA_CALLBACK_URL = "https://francisco-gritless-minian.ngrok-free.dev/mpesa/callback"
 
     MPESA_BASE_URL = (
         "https://sandbox.safaricom.co.ke"
